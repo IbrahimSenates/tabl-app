@@ -5,6 +5,7 @@ import 'menu_management_screen.dart';
 import 'qr_code_generate_screen.dart';
 import 'business_orders_screen.dart';
 import 'campaign_management_screen.dart';
+import 'business_reviews_screen.dart';
 
 class BusinessHomeScreen extends StatelessWidget {
   const BusinessHomeScreen({super.key});
@@ -184,12 +185,13 @@ class BusinessHomeScreen extends StatelessWidget {
                       context,
                       icon: Icons.star,
                       title: 'Puan Sistemi',
-                      subtitle: 'Puan ayarları',
+                      subtitle: 'Puanlar ve yorumlar',
                       color: Colors.amber,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Puan sistemi yakında eklenecek.'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BusinessReviewsScreen(),
                           ),
                         );
                       },

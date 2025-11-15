@@ -142,6 +142,19 @@ service cloud.firestore {
       // İlerleme silinemez
       allow delete: if false;
     }
+    
+    // Yorumlar (Reviews) koleksiyonu
+    match /reviews/{reviewId} {
+      // Müşteriler kendi yorumlarını okuyabilir
+      // İşletmeler kendi işletmelerine ait yorumları okuyabilir
+      // Sorgu yaparken (list) tüm authenticated kullanıcılar erişebilir (uygulama seviyesinde filtreleme yapılacak)
+      allow read: if request.auth != null;
+      // Müşteriler kendi siparişleri için yorum oluşturabilir veya güncelleyebilir
+      allow create, update: if request.auth != null && 
+                             request.resource.data.customerId == request.auth.uid;
+      // Yorum silinemez
+      allow delete: if false;
+    }
   }
 }
 ```
@@ -187,7 +200,22 @@ Firestore > Indexes sekmesine gidin ve şu index'leri oluşturun:
 - `customerId` (Ascending)
 - `businessId` (Ascending)
 
-**Not:** Bu index'ler kampanya ilerlemesi sorguları için gereklidir. Oluşturulmazsa sorgu hatası alabilirsiniz.
+**Collection:** `orders`
+**Fields:**
+- `customerId` (Ascending)
+- `businessId` (Ascending)
+- `createdAt` (Descending)
+
+**Collection:** `reviews`
+**Fields:**
+- `businessId` (Ascending)
+- `createdAt` (Descending)
+
+**Collection:** `reviews`
+**Fields:**
+- `orderId` (Ascending)
+
+**Not:** Bu index'ler kampanya ilerlemesi ve yorum sorguları için gereklidir. Oluşturulmazsa sorgu hatası alabilirsiniz.
 
 ## Test Verisi Ekleme (Opsiyonel)
 

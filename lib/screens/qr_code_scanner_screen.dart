@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'menu_view_screen.dart';
+import 'customer_business_home_screen.dart';
 
 class QRCodeScannerScreen extends StatefulWidget {
   const QRCodeScannerScreen({super.key});
@@ -57,12 +57,12 @@ class _QRCodeScannerScreenState extends State<QRCodeScannerScreen> {
       return;
     }
 
-    // Menü görüntüleme ekranına yönlendir
+    // İşletme ana sayfasına yönlendir
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => MenuViewScreen(businessId: businessId),
+          builder: (context) => CustomerBusinessHomeScreen(businessId: businessId),
         ),
       );
     }
@@ -138,23 +138,22 @@ class QRScannerOverlay extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.5)
+      ..color = Colors.black.withOpacity(0.6)
       ..style = PaintingStyle.fill;
 
-    // Dış alanı boya
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-
-    // Ortadaki kareyi temizle
+    // Ortadaki tarama alanı
     final scanArea = 250.0;
     final left = (size.width - scanArea) / 2;
     final top = (size.height - scanArea) / 2;
     final scanRect = Rect.fromLTWH(left, top, scanArea, scanArea);
 
-    final clearPaint = Paint()
-      ..color = Colors.transparent
-      ..blendMode = BlendMode.clear;
+    // Path ile dış alanı çiz (orta kareyi exclude et)
+    final path = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRect(scanRect)
+      ..fillType = PathFillType.evenOdd;
 
-    canvas.drawRect(scanRect, clearPaint);
+    canvas.drawPath(path, paint);
 
     // Köşe çizgileri
     final cornerPaint = Paint()

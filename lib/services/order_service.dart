@@ -155,6 +155,27 @@ class OrderService {
     }
   }
 
+  // Müşterinin belirli bir işletmeden verdiği siparişleri al
+  Future<List<Order>> getCustomerOrdersByBusiness({
+    required String customerId,
+    required String businessId,
+  }) async {
+    try {
+      final snapshot = await _firestore
+          .collection('orders')
+          .where('customerId', isEqualTo: customerId)
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Order.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw 'Siparişler alınırken hata oluştu: $e';
+    }
+  }
+
   // İşletmenin siparişlerini al
   Future<List<Order>> getBusinessOrders(String businessId) async {
     try {
