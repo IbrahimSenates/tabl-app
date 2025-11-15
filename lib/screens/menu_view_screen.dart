@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/menu_service.dart';
+import '../models/cart_item.dart';
+import 'cart_screen.dart';
 
 class MenuViewScreen extends StatefulWidget {
   final String businessId;
@@ -20,6 +22,7 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
   String? _businessName;
   bool _isLoading = true;
   String? _selectedCategoryId;
+  List<CartItem> _cartItems = [];
 
   @override
   void initState() {
@@ -88,6 +91,42 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadMenu,
             tooltip: 'Yenile',
+          ),
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.shopping_cart),
+                onPressed: _cartItems.isEmpty
+                    ? null
+                    : () => _openCart(),
+                tooltip: 'Sepet',
+              ),
+              if (_cartItems.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      _cartItems.fold<int>(0, (sum, item) => sum + item.quantity).toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -269,6 +308,14 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
                                             ],
                                           ),
                                         ),
+                                        // Sepete ekle butonu
+                                        const SizedBox(width: 8),
+                                        IconButton(
+                                          icon: const Icon(Icons.add_shopping_cart),
+                                          color: Theme.of(context).colorScheme.primary,
+                                          onPressed: () => _addToCart(item),
+                                          tooltip: 'Sepete Ekle',
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -278,6 +325,55 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
                     ),
                   ],
                 ),
+    );
+  }
+
+  void _addToCart(MenuItem item) {
+    setState(() {
+      final existingIndex = _cartItems.indexWhere(
+        (cartItem) => cartItem.menuItem.id == item.id,
+      );
+
+      if (existingIndex >= 0) {
+        // Eğer sepette varsa miktarını artır
+        _cartItems[existingIndex].quantity++;
+      } else {
+        // Yoksa yeni ekle
+        _cartItems.add(CartItem(menuItem: item, quantity: 1));
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${item.name} sepete eklendi'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'Sepete Git',
+          textColor: Colors.white,
+          onPressed: () => _openCart(),
+        ),
+      ),
+    );
+  }
+
+  void _openCart() {
+    if (_cartItems.isEmpty) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          cartItems: _cartItems,
+          businessId: widget.businessId,
+          businessName: _businessName ?? 'İşletme',
+          onOrderPlaced: () {
+            setState(() {
+              _cartItems.clear();
+            });
+          },
+        ),
+      ),
     );
   }
 }
