@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import 'menu_management_screen.dart';
 import 'qr_code_generate_screen.dart';
+import 'business_orders_screen.dart';
 
 class BusinessHomeScreen extends StatelessWidget {
   const BusinessHomeScreen({super.key});
@@ -155,9 +156,10 @@ class BusinessHomeScreen extends StatelessWidget {
                       subtitle: 'Sipariş takibi',
                       color: Colors.green,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Sipariş takibi yakında eklenecek.'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BusinessOrdersScreen(),
                           ),
                         );
                       },

@@ -96,6 +96,23 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && 
                              resource.data.businessId == request.auth.uid;
     }
+    
+    // Siparişler koleksiyonu
+    match /orders/{orderId} {
+      // Müşteriler kendi siparişlerini okuyabilir
+      // İşletmeler kendi işletmelerine gelen siparişleri okuyabilir
+      allow read: if request.auth != null && 
+                   (resource.data.customerId == request.auth.uid ||
+                    resource.data.businessId == request.auth.uid);
+      // Müşteriler sipariş oluşturabilir
+      allow create: if request.auth != null && 
+                     request.resource.data.customerId == request.auth.uid;
+      // İşletmeler kendi siparişlerinin durumunu güncelleyebilir
+      allow update: if request.auth != null && 
+                     resource.data.businessId == request.auth.uid;
+      // Sipariş silinemez
+      allow delete: if false;
+    }
   }
 }
 ```
@@ -114,6 +131,16 @@ Firestore > Indexes sekmesine gidin ve şu index'leri oluşturun:
 - `businessId` (Ascending)
 - `isAvailable` (Ascending)
 - `order` (Ascending)
+
+**Collection:** `orders`
+**Fields:**
+- `customerId` (Ascending)
+- `createdAt` (Descending)
+
+**Collection:** `orders`
+**Fields:**
+- `businessId` (Ascending)
+- `createdAt` (Descending)
 
 ## Test Verisi Ekleme (Opsiyonel)
 

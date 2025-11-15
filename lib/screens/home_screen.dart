@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'qr_code_scanner_screen.dart';
+import 'customer_orders_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -75,6 +76,25 @@ class HomeScreen extends StatelessWidget {
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('QR Kod Okut'),
               style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CustomerOrdersScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.receipt_long),
+              label: const Text('Siparişlerim'),
+              style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 16,
