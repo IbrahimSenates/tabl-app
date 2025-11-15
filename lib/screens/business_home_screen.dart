@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import 'menu_management_screen.dart';
+import 'qr_code_generate_screen.dart';
 
 class BusinessHomeScreen extends StatelessWidget {
   const BusinessHomeScreen({super.key});
@@ -124,9 +125,10 @@ class BusinessHomeScreen extends StatelessWidget {
                       subtitle: 'QR kod oluştur',
                       color: Colors.blue,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('QR kod oluşturma özelliği yakında eklenecek.'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const QRCodeGenerateScreen(),
                           ),
                         );
                       },

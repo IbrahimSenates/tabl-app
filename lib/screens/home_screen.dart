@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'qr_code_scanner_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -64,10 +65,10 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                // QR kod okutma özelliği daha sonra eklenecek
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('QR kod okutma özelliği yakında eklenecek.'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const QRCodeScannerScreen(),
                   ),
                 );
               },

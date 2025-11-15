@@ -39,6 +39,12 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.3
+  
+  # QR Code
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
+  share_plus: ^7.2.1
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:
