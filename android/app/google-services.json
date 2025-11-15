@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281728260970",
+    "project_id": "tablapp-1cd6d",
+    "storage_bucket": "tablapp-1cd6d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281728260970:android:993300d91fa6364c106313",
+        "android_client_info": {
+          "package_name": "com.example.tabl_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxCN7SMhMSjWxaWGfd7mMgD3EJiSrIw3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
