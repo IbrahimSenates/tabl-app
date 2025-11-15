@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
 import '../services/campaign_service.dart';
@@ -79,7 +78,9 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sipariş durumu "${_getStatusText(newStatus)}" olarak güncellendi'),
+            content: Text(
+              'Sipariş durumu "${_getStatusText(newStatus)}" olarak güncellendi',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -88,10 +89,7 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hata: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -100,8 +98,12 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
   Future<void> _updateCampaignProgress(Order order) async {
     try {
       // İşletmenin aktif kampanyalarını al
-      final campaigns = await _campaignService.getActiveCampaigns(order.businessId);
-      print('Kampanya ilerlemesi güncelleniyor. Toplam kampanya: ${campaigns.length}');
+      final campaigns = await _campaignService.getActiveCampaigns(
+        order.businessId,
+      );
+      print(
+        'Kampanya ilerlemesi güncelleniyor. Toplam kampanya: ${campaigns.length}',
+      );
 
       for (final campaign in campaigns) {
         if (campaign.id == null) {
@@ -122,7 +124,9 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
           }
 
           if (shouldUpdate) {
-            print('Kampanya ilerlemesi güncelleniyor: ${campaign.title}, Müşteri: ${order.customerId}, Miktar: ${orderItem.quantity}');
+            print(
+              'Kampanya ilerlemesi güncelleniyor: ${campaign.title}, Müşteri: ${order.customerId}, Miktar: ${orderItem.quantity}',
+            );
             // Kampanya ilerlemesini güncelle
             await _campaignService.updateProgress(
               customerId: order.customerId,
@@ -220,7 +224,10 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                 // Durum filtresi
                 Container(
                   height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: OrderStatus.values.length + 1,
@@ -291,7 +298,9 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                               elevation: 2,
                               child: ExpansionTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: _getStatusColor(order.status).withOpacity(0.2),
+                                  backgroundColor: _getStatusColor(
+                                    order.status,
+                                  ).withOpacity(0.2),
                                   child: Icon(
                                     _getStatusIcon(order.status),
                                     color: _getStatusColor(order.status),
@@ -299,7 +308,9 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                                 ),
                                 title: Text(
                                   'Sipariş #${order.id?.substring(0, 8) ?? 'N/A'}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,7 +334,9 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                                     _getStatusText(order.status),
                                     style: const TextStyle(fontSize: 12),
                                   ),
-                                  backgroundColor: _getStatusColor(order.status).withOpacity(0.2),
+                                  backgroundColor: _getStatusColor(
+                                    order.status,
+                                  ).withOpacity(0.2),
                                   labelStyle: TextStyle(
                                     color: _getStatusColor(order.status),
                                     fontWeight: FontWeight.bold,
@@ -333,7 +346,8 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                                   Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // Sipariş öğeleri
                                         const Text(
@@ -344,24 +358,33 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        ...order.items.map((item) => Padding(
-                                              padding: const EdgeInsets.only(bottom: 8),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    '${item.quantity}x ${item.name}',
+                                        ...order.items.map(
+                                          (item) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Text(
+                                                  '${item.quantity}x ${item.name}',
+                                                ),
+                                                Text(
+                                                  '${item.total.toStringAsFixed(2)} ₺',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
                                                   ),
-                                                  Text(
-                                                    '${item.total.toStringAsFixed(2)} ₺',
-                                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                                  ),
-                                                ],
-                                              ),
-                                            )),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                                         const Divider(),
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             const Text(
                                               'Toplam:',
@@ -375,28 +398,39 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                                               style: TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 18,
-                                                color: Theme.of(context).colorScheme.primary,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
                                               ),
                                             ),
                                           ],
                                         ),
-                                        if (order.customerNote != null && order.customerNote!.isNotEmpty) ...[
+                                        if (order.customerNote != null &&
+                                            order.customerNote!.isNotEmpty) ...[
                                           const SizedBox(height: 8),
                                           Container(
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
                                               color: Colors.blue[50],
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Icon(Icons.note, size: 20, color: Colors.blue[700]),
+                                                Icon(
+                                                  Icons.note,
+                                                  size: 20,
+                                                  color: Colors.blue[700],
+                                                ),
                                                 const SizedBox(width: 8),
                                                 Expanded(
                                                   child: Text(
                                                     order.customerNote!,
-                                                    style: TextStyle(color: Colors.blue[900]),
+                                                    style: TextStyle(
+                                                      color: Colors.blue[900],
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -417,46 +451,91 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
                                           spacing: 8,
                                           runSpacing: 8,
                                           children: [
-                                            if (order.status == OrderStatus.pending)
+                                            if (order.status ==
+                                                OrderStatus.pending)
                                               ElevatedButton.icon(
-                                                onPressed: () => _updateOrderStatus(order, OrderStatus.confirmed),
-                                                icon: const Icon(Icons.check, size: 18),
+                                                onPressed: () =>
+                                                    _updateOrderStatus(
+                                                      order,
+                                                      OrderStatus.confirmed,
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.check,
+                                                  size: 18,
+                                                ),
                                                 label: const Text('Onayla'),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: Colors.blue,
                                                 ),
                                               ),
-                                            if (order.status == OrderStatus.confirmed)
+                                            if (order.status ==
+                                                OrderStatus.confirmed)
                                               ElevatedButton.icon(
-                                                onPressed: () => _updateOrderStatus(order, OrderStatus.preparing),
-                                                icon: const Icon(Icons.restaurant, size: 18),
-                                                label: const Text('Hazırlanıyor'),
+                                                onPressed: () =>
+                                                    _updateOrderStatus(
+                                                      order,
+                                                      OrderStatus.preparing,
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.restaurant,
+                                                  size: 18,
+                                                ),
+                                                label: const Text(
+                                                  'Hazırlanıyor',
+                                                ),
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.purple,
+                                                  backgroundColor:
+                                                      Colors.purple,
                                                 ),
                                               ),
-                                            if (order.status == OrderStatus.preparing)
+                                            if (order.status ==
+                                                OrderStatus.preparing)
                                               ElevatedButton.icon(
-                                                onPressed: () => _updateOrderStatus(order, OrderStatus.ready),
-                                                icon: const Icon(Icons.check_circle, size: 18),
+                                                onPressed: () =>
+                                                    _updateOrderStatus(
+                                                      order,
+                                                      OrderStatus.ready,
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.check_circle,
+                                                  size: 18,
+                                                ),
                                                 label: const Text('Hazır'),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: Colors.green,
                                                 ),
                                               ),
-                                            if (order.status == OrderStatus.ready)
+                                            if (order.status ==
+                                                OrderStatus.ready)
                                               ElevatedButton.icon(
-                                                onPressed: () => _updateOrderStatus(order, OrderStatus.completed),
-                                                icon: const Icon(Icons.done_all, size: 18),
+                                                onPressed: () =>
+                                                    _updateOrderStatus(
+                                                      order,
+                                                      OrderStatus.completed,
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.done_all,
+                                                  size: 18,
+                                                ),
                                                 label: const Text('Tamamlandı'),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: Colors.grey,
                                                 ),
                                               ),
-                                            if (order.status != OrderStatus.completed && order.status != OrderStatus.cancelled)
+                                            if (order.status !=
+                                                    OrderStatus.completed &&
+                                                order.status !=
+                                                    OrderStatus.cancelled)
                                               OutlinedButton.icon(
-                                                onPressed: () => _updateOrderStatus(order, OrderStatus.cancelled),
-                                                icon: const Icon(Icons.cancel, size: 18),
+                                                onPressed: () =>
+                                                    _updateOrderStatus(
+                                                      order,
+                                                      OrderStatus.cancelled,
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.cancel,
+                                                  size: 18,
+                                                ),
                                                 label: const Text('İptal Et'),
                                                 style: OutlinedButton.styleFrom(
                                                   foregroundColor: Colors.red,
@@ -478,4 +557,3 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
     );
   }
 }
-

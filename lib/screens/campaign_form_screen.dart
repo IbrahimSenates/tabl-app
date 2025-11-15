@@ -40,7 +40,8 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
     if (widget.campaign != null) {
       _titleController.text = widget.campaign!.title;
       _descriptionController.text = widget.campaign!.description;
-      _requiredQuantityController.text = widget.campaign!.requiredQuantity.toString();
+      _requiredQuantityController.text = widget.campaign!.requiredQuantity
+          .toString();
       _freeQuantityController.text = widget.campaign!.freeQuantity.toString();
       _selectedMenuItemId = widget.campaign!.applicableMenuItemId;
       _isActive = widget.campaign!.isActive;
@@ -149,10 +150,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hata: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -254,7 +252,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
 
               // Ürün seçimi (opsiyonel)
               DropdownButtonFormField<String>(
-                value: _selectedMenuItemId,
+                initialValue: _selectedMenuItemId,
                 decoration: const InputDecoration(
                   labelText: 'Uygulanacak Ürün (Opsiyonel)',
                   hintText: 'Tüm ürünler için boş bırakın',
@@ -335,7 +333,9 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : Text(
@@ -350,4 +350,3 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
     );
   }
 }
-

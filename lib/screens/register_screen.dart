@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 
@@ -60,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             setState(() {
               _isLoading = false;
             });
-            
+
             _showSuccessDialog(
               title: 'Kayıt Başarılı',
               message: 'Hesabınız başarıyla oluşturuldu. Giriş yapabilirsiniz.',
@@ -72,10 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           setState(() {
             _isLoading = false;
           });
-          _showErrorDialog(
-            title: 'Kayıt Hatası',
-            message: e.toString(),
-          );
+          _showErrorDialog(title: 'Kayıt Hatası', message: e.toString());
         }
       }
     }
@@ -112,18 +108,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     'Yeni Hesap Oluştur',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Kullanıcı tipi seçimi
                   Text(
                     'Hesap Tipi',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -172,7 +168,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // İşletme adı alanı (sadece işletme seçildiğinde)
                   if (_selectedUserType == UserType.business) ...[
                     TextFormField(
@@ -198,7 +194,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // E-posta alanı
                   TextFormField(
                     controller: _emailController,
@@ -224,7 +220,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Şifre alanı
                   TextFormField(
                     controller: _passwordController,
@@ -262,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Şifre tekrar alanı
                   TextFormField(
                     controller: _confirmPasswordController,
@@ -300,7 +296,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Kayıt ol butonu
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
@@ -316,7 +312,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -325,7 +323,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Giriş yap linki
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -355,18 +353,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 28,
-            ),
+            Icon(Icons.error_outline, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 18))),
           ],
         ),
         content: Text(message),
@@ -376,9 +365,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: const Text('Tamam'),
           ),
         ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -390,18 +377,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(
-              Icons.check_circle_outline,
-              color: Colors.green,
-              size: 28,
-            ),
+            Icon(Icons.check_circle_outline, color: Colors.green, size: 28),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 18))),
           ],
         ),
         content: Text(message),
@@ -409,16 +387,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context); // Dialog'u kapat
-              Navigator.pushReplacementNamed(context, '/login'); // Giriş ekranına yönlendir
+              Navigator.pushReplacementNamed(
+                context,
+                '/login',
+              ); // Giriş ekranına yönlendir
             },
             child: const Text('Tamam'),
           ),
         ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 }
-

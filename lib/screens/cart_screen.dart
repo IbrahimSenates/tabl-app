@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/cart_item.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
@@ -44,7 +43,9 @@ class _CartScreenState extends State<CartScreen> {
       if (user == null) return;
 
       // Aktif kampanyaları al
-      final campaigns = await _campaignService.getActiveCampaigns(widget.businessId);
+      final campaigns = await _campaignService.getActiveCampaigns(
+        widget.businessId,
+      );
       final campaignsMap = <String, Campaign>{};
       for (final campaign in campaigns) {
         if (campaign.id != null) {
@@ -218,9 +219,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sepetim'),
-      ),
+      appBar: AppBar(title: const Text('Sepetim')),
       body: widget.cartItems.isEmpty
           ? Center(
               child: Column(
@@ -234,10 +233,7 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Sepetiniz boş',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -287,7 +283,9 @@ class _CartScreenState extends State<CartScreen> {
                                         : '${itemPrice.toStringAsFixed(2)} ₺ x ${cartItem.quantity}',
                                     style: TextStyle(
                                       color: isFree ? Colors.green[700] : null,
-                                      fontWeight: isFree ? FontWeight.bold : null,
+                                      fontWeight: isFree
+                                          ? FontWeight.bold
+                                          : null,
                                     ),
                                   ),
                                 ],
@@ -378,7 +376,9 @@ class _CartScreenState extends State<CartScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : const Text(
@@ -395,4 +395,3 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 }
-

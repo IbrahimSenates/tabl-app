@@ -47,5 +47,7 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>QR kod okutmak için kamera erişimine ihtiyacımız var</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galeriden QR kod içeren resim seçmek için galeri erişimine ihtiyacımız var</string>
 </dict>
 </plist>
