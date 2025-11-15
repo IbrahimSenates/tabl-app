@@ -4,6 +4,7 @@ import '../services/user_service.dart';
 import 'menu_management_screen.dart';
 import 'qr_code_generate_screen.dart';
 import 'business_orders_screen.dart';
+import 'campaign_management_screen.dart';
 
 class BusinessHomeScreen extends StatelessWidget {
   const BusinessHomeScreen({super.key});
@@ -171,9 +172,10 @@ class BusinessHomeScreen extends StatelessWidget {
                       subtitle: 'Kampanya yönetimi',
                       color: Colors.purple,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Kampanya yönetimi yakında eklenecek.'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CampaignManagementScreen(),
                           ),
                         );
                       },

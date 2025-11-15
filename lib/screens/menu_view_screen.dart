@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/menu_service.dart';
+import '../services/campaign_service.dart';
+import '../services/auth_service.dart';
 import '../models/cart_item.dart';
 import 'cart_screen.dart';
+import 'customer_campaigns_screen.dart';
 
 class MenuViewScreen extends StatefulWidget {
   final String businessId;
@@ -17,12 +20,16 @@ class MenuViewScreen extends StatefulWidget {
 
 class _MenuViewScreenState extends State<MenuViewScreen> {
   final _menuService = MenuService();
+  final _campaignService = CampaignService();
+  final _authService = AuthService();
   List<MenuCategory> _categories = [];
   List<MenuItem> _menuItems = [];
   String? _businessName;
   bool _isLoading = true;
   String? _selectedCategoryId;
   List<CartItem> _cartItems = [];
+  Map<String, CampaignProgress> _campaignProgressMap = {};
+  Map<String, Campaign> _activeCampaignsMap = {};
 
   @override
   void initState() {
@@ -47,9 +54,39 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
       // Sadece mevcut olan menü öğelerini filtrele
       final availableItems = menuItems.where((item) => item.isAvailable).toList();
 
+      // Kampanya ilerlemelerini ve aktif kampanyaları yükle
+      final user = _authService.currentUser;
+      Map<String, CampaignProgress> progressMap = {};
+      Map<String, Campaign> campaignsMap = {};
+      if (user != null) {
+        try {
+          // Aktif kampanyaları al
+          final campaigns = await _campaignService.getActiveCampaigns(widget.businessId);
+          for (final campaign in campaigns) {
+            if (campaign.id != null) {
+              campaignsMap[campaign.id!] = campaign;
+            }
+          }
+
+          // Kampanya ilerlemelerini al
+          final progresses = await _campaignService.getCustomerProgresses(
+            customerId: user.uid,
+            businessId: widget.businessId,
+          );
+          for (final progress in progresses) {
+            progressMap[progress.campaignId] = progress;
+          }
+        } catch (e) {
+          // Kampanya ilerlemesi yüklenemezse devam et
+          print('Kampanya ilerlemesi yüklenirken hata: $e');
+        }
+      }
+
       setState(() {
         _categories = categories;
         _menuItems = availableItems;
+        _campaignProgressMap = progressMap;
+        _activeCampaignsMap = campaignsMap;
         _isLoading = false;
       });
     } catch (e) {
@@ -77,6 +114,55 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
     return items.where((item) => item.categoryId == _selectedCategoryId).toList();
   }
 
+  // Ürün için kampanya tamamlandı mı kontrol et
+  Future<bool> _isItemFree(MenuItem item) async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) return false;
+
+      // Aktif kampanyaları al
+      final campaigns = await _campaignService.getActiveCampaigns(widget.businessId);
+
+      for (final campaign in campaigns) {
+        final progress = _campaignProgressMap[campaign.id ?? ''];
+        if (progress == null || !progress.isCompleted) continue;
+
+        // Kampanya tamamlandıysa kontrol et
+        if (campaign.applicableMenuItemId == null) {
+          // Tüm ürünler için kampanya
+          return true;
+        } else if (campaign.applicableMenuItemId == item.id) {
+          // Belirli ürün için kampanya
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Ürün fiyatını hesapla (kampanya varsa 0)
+  double _getItemPrice(MenuItem item, Map<String, Campaign>? campaignsMap) {
+    if (campaignsMap == null) return item.price;
+
+    for (final campaign in campaignsMap.values) {
+      final progress = _campaignProgressMap[campaign.id ?? ''];
+      if (progress == null || !progress.isCompleted) continue;
+
+      // Kampanya tamamlandıysa kontrol et
+      if (campaign.applicableMenuItemId == null) {
+        // Tüm ürünler için kampanya - sadece freeQuantity kadar bedava
+        // Şimdilik tüm ürünleri bedava yapıyoruz, daha sonra iyileştirilebilir
+        return 0.0;
+      } else if (campaign.applicableMenuItemId == item.id) {
+        // Belirli ürün için kampanya
+        return 0.0;
+      }
+    }
+    return item.price;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,6 +173,20 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.local_offer),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CustomerCampaignsScreen(
+                    businessId: widget.businessId,
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Kampanyalar',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadMenu,
@@ -295,13 +395,55 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
                                                     ),
                                                   ),
                                                   const Spacer(),
-                                                  Text(
-                                                    '${item.price.toStringAsFixed(2)} ₺',
-                                                    style: const TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.orange,
-                                                    ),
+                                                  Builder(
+                                                    builder: (context) {
+                                                      final displayPrice = _getItemPrice(item, _activeCampaignsMap);
+                                                      final isFree = displayPrice == 0.0;
+                                                      return Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                                        children: [
+                                                          if (isFree)
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 4,
+                                                              ),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.green[100],
+                                                                borderRadius: BorderRadius.circular(4),
+                                                              ),
+                                                              child: Text(
+                                                                'BEDAVA',
+                                                                style: TextStyle(
+                                                                  fontSize: 10,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: Colors.green[900],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          if (isFree && item.price > 0)
+                                                            Text(
+                                                              '${item.price.toStringAsFixed(2)} ₺',
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                fontWeight: FontWeight.bold,
+                                                                color: Colors.grey[600],
+                                                                decoration: TextDecoration.lineThrough,
+                                                              ),
+                                                            ),
+                                                          Text(
+                                                            isFree
+                                                                ? '0.00 ₺'
+                                                                : '${item.price.toStringAsFixed(2)} ₺',
+                                                            style: TextStyle(
+                                                              fontSize: 18,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: isFree ? Colors.green[700] : Colors.orange,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    },
                                                   ),
                                                 ],
                                               ),
@@ -343,9 +485,15 @@ class _MenuViewScreenState extends State<MenuViewScreen> {
       }
     });
 
+    final displayPrice = _getItemPrice(item, _activeCampaignsMap);
+    final isFree = displayPrice == 0.0;
+    final message = isFree
+        ? '${item.name} sepete eklendi (BEDAVA)'
+        : '${item.name} sepete eklendi';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${item.name} sepete eklendi'),
+        content: Text(message),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(

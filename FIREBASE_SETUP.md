@@ -113,6 +113,35 @@ service cloud.firestore {
       // Sipariş silinemez
       allow delete: if false;
     }
+    
+    // Kampanyalar koleksiyonu
+    match /campaigns/{campaignId} {
+      // Herkes aktif kampanyaları okuyabilir (müşteriler için)
+      allow read: if request.auth != null;
+      // Sadece işletme sahibi kampanya oluşturabilir ve yönetebilir
+      allow create: if request.auth != null && 
+                     request.resource.data.businessId == request.auth.uid;
+      allow update, delete: if request.auth != null && 
+                             resource.data.businessId == request.auth.uid;
+    }
+    
+    // Kampanya ilerlemeleri koleksiyonu
+    match /campaignProgress/{progressId} {
+      // Müşteriler kendi ilerlemelerini okuyabilir
+      // İşletmeler kendi işletmelerine ait ilerlemeleri okuyabilir
+      // Sorgu yaparken (list) tüm authenticated kullanıcılar erişebilir (uygulama seviyesinde filtreleme yapılacak)
+      allow read: if request.auth != null;
+      // İşletmeler kendi işletmelerine ait ilerlemeleri oluşturabilir
+      allow create: if request.auth != null && 
+                     request.resource.data.businessId == request.auth.uid;
+      // İşletmeler kendi işletmelerine ait ilerlemeleri güncelleyebilir
+      // Müşteriler kendi ilerlemelerini güncelleyebilir (sistem tarafından - resetProgress için)
+      allow update: if request.auth != null && 
+                     (resource.data.customerId == request.auth.uid ||
+                      resource.data.businessId == request.auth.uid);
+      // İlerleme silinemez
+      allow delete: if false;
+    }
   }
 }
 ```
@@ -141,6 +170,24 @@ Firestore > Indexes sekmesine gidin ve şu index'leri oluşturun:
 **Fields:**
 - `businessId` (Ascending)
 - `createdAt` (Descending)
+
+**Collection:** `campaigns`
+**Fields:**
+- `businessId` (Ascending)
+- `isActive` (Ascending)
+- `createdAt` (Descending)
+
+**Collection:** `campaignProgress`
+**Fields:**
+- `customerId` (Ascending)
+- `campaignId` (Ascending)
+
+**Collection:** `campaignProgress`
+**Fields:**
+- `customerId` (Ascending)
+- `businessId` (Ascending)
+
+**Not:** Bu index'ler kampanya ilerlemesi sorguları için gereklidir. Oluşturulmazsa sorgu hatası alabilirsiniz.
 
 ## Test Verisi Ekleme (Opsiyonel)
 

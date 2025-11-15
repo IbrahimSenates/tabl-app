@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/cart_item.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
+import '../services/campaign_service.dart';
 
 class CartScreen extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -25,11 +26,108 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final _orderService = OrderService();
   final _authService = AuthService();
+  final _campaignService = CampaignService();
   final _noteController = TextEditingController();
   bool _isPlacingOrder = false;
+  Map<String, CampaignProgress> _campaignProgressMap = {};
+  Map<String, Campaign> _activeCampaignsMap = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCampaignData();
+  }
+
+  Future<void> _loadCampaignData() async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) return;
+
+      // Aktif kampanyaları al
+      final campaigns = await _campaignService.getActiveCampaigns(widget.businessId);
+      final campaignsMap = <String, Campaign>{};
+      for (final campaign in campaigns) {
+        if (campaign.id != null) {
+          campaignsMap[campaign.id!] = campaign;
+        }
+      }
+
+      // Kampanya ilerlemelerini al
+      final progresses = await _campaignService.getCustomerProgresses(
+        customerId: user.uid,
+        businessId: widget.businessId,
+      );
+      final progressMap = <String, CampaignProgress>{};
+      for (final progress in progresses) {
+        progressMap[progress.campaignId] = progress;
+      }
+
+      setState(() {
+        _activeCampaignsMap = campaignsMap;
+        _campaignProgressMap = progressMap;
+      });
+    } catch (e) {
+      // Hata durumunda devam et
+      print('Kampanya verileri yüklenirken hata: $e');
+    }
+  }
+
+  // Ürün fiyatını hesapla (kampanya varsa 0)
+  double _getItemPrice(cartItem) {
+    final item = cartItem.menuItem;
+    for (final campaign in _activeCampaignsMap.values) {
+      final progress = _campaignProgressMap[campaign.id ?? ''];
+      if (progress == null || !progress.isCompleted) continue;
+
+      if (campaign.applicableMenuItemId == null) {
+        // Tüm ürünler için kampanya
+        return 0.0;
+      } else if (campaign.applicableMenuItemId == item.id) {
+        // Belirli ürün için kampanya
+        return 0.0;
+      }
+    }
+    return item.price;
+  }
 
   double get _totalAmount {
-    return widget.cartItems.fold(0.0, (sum, item) => sum + item.total);
+    return widget.cartItems.fold(0.0, (sum, cartItem) {
+      final itemPrice = _getItemPrice(cartItem);
+      return sum + (itemPrice * cartItem.quantity);
+    });
+  }
+
+  // Kampanya tamamlandıysa ve bedava ürün kullanıldıysa ilerlemeyi sıfırla
+  Future<void> _resetCampaignProgressIfUsed() async {
+    try {
+      for (final cartItem in widget.cartItems) {
+        final itemPrice = _getItemPrice(cartItem);
+        if (itemPrice == 0.0) {
+          // Bedava ürün kullanıldı, ilgili kampanyaları bul ve ilerlemeyi sıfırla
+          for (final campaign in _activeCampaignsMap.values) {
+            final progress = _campaignProgressMap[campaign.id ?? ''];
+            if (progress == null || !progress.isCompleted) continue;
+
+            bool shouldReset = false;
+            if (campaign.applicableMenuItemId == null) {
+              // Tüm ürünler için kampanya
+              shouldReset = true;
+            } else if (campaign.applicableMenuItemId == cartItem.menuItem.id) {
+              // Belirli ürün için kampanya
+              shouldReset = true;
+            }
+
+            if (shouldReset && progress.id != null) {
+              // İlerlemeyi sıfırla
+              await _campaignService.resetProgress(progress.id!);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Hata durumunda devam et
+      print('Kampanya ilerlemesi sıfırlanırken hata: $e');
+    }
   }
 
   @override
@@ -66,10 +164,12 @@ class _CartScreenState extends State<CartScreen> {
 
     try {
       final orderItems = widget.cartItems.map((cartItem) {
+        // Kampanya kontrolü yap - eğer bedava ise fiyatı 0 yap
+        final itemPrice = _getItemPrice(cartItem);
         return OrderItem(
           menuItemId: cartItem.menuItem.id ?? '',
           name: cartItem.menuItem.name,
-          price: cartItem.menuItem.price,
+          price: itemPrice, // Kampanya fiyatı
           quantity: cartItem.quantity,
         );
       }).toList();
@@ -86,6 +186,9 @@ class _CartScreenState extends State<CartScreen> {
       );
 
       await _orderService.createOrder(order);
+
+      // Kampanya tamamlandıysa ve bedava ürün kullanıldıysa ilerlemeyi sıfırla
+      await _resetCampaignProgressIfUsed();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,16 +264,50 @@ class _CartScreenState extends State<CartScreen> {
                             cartItem.menuItem.name,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text(
-                            '${cartItem.menuItem.price.toStringAsFixed(2)} ₺ x ${cartItem.quantity}',
+                          subtitle: Builder(
+                            builder: (context) {
+                              final itemPrice = _getItemPrice(cartItem);
+                              final isFree = itemPrice == 0.0;
+                              final originalPrice = cartItem.menuItem.price;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (isFree && originalPrice > 0)
+                                    Text(
+                                      '${originalPrice.toStringAsFixed(2)} ₺ x ${cartItem.quantity}',
+                                      style: TextStyle(
+                                        decoration: TextDecoration.lineThrough,
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  Text(
+                                    isFree
+                                        ? '0.00 ₺ x ${cartItem.quantity} (BEDAVA)'
+                                        : '${itemPrice.toStringAsFixed(2)} ₺ x ${cartItem.quantity}',
+                                    style: TextStyle(
+                                      color: isFree ? Colors.green[700] : null,
+                                      fontWeight: isFree ? FontWeight.bold : null,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
-                          trailing: Text(
-                            '${cartItem.total.toStringAsFixed(2)} ₺',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.orange,
-                            ),
+                          trailing: Builder(
+                            builder: (context) {
+                              final itemPrice = _getItemPrice(cartItem);
+                              final itemTotal = itemPrice * cartItem.quantity;
+                              final isFree = itemPrice == 0.0;
+                              return Text(
+                                '${itemTotal.toStringAsFixed(2)} ₺',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isFree ? Colors.green : Colors.orange,
+                                ),
+                              );
+                            },
                           ),
                         ),
                       );

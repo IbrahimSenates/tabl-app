@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
+import '../services/campaign_service.dart';
 
 class BusinessOrdersScreen extends StatefulWidget {
   const BusinessOrdersScreen({super.key});
@@ -13,6 +14,7 @@ class BusinessOrdersScreen extends StatefulWidget {
 class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
   final _orderService = OrderService();
   final _authService = AuthService();
+  final _campaignService = CampaignService();
   List<Order> _orders = [];
   bool _isLoading = true;
   OrderStatus? _selectedStatus;
@@ -63,7 +65,17 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
     try {
       if (order.id == null) return;
 
+      // Eski durumu kontrol et
+      final wasCompleted = order.status == OrderStatus.completed;
+      final willBeCompleted = newStatus == OrderStatus.completed;
+
       await _orderService.updateOrderStatus(order.id!, newStatus);
+
+      // Sipariş tamamlandıysa ve daha önce tamamlanmamışsa kampanya ilerlemesini güncelle
+      if (willBeCompleted && !wasCompleted) {
+        await _updateCampaignProgress(order);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -79,6 +91,58 @@ class _BusinessOrdersScreenState extends State<BusinessOrdersScreen> {
           SnackBar(
             content: Text('Hata: $e'),
             backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateCampaignProgress(Order order) async {
+    try {
+      // İşletmenin aktif kampanyalarını al
+      final campaigns = await _campaignService.getActiveCampaigns(order.businessId);
+      print('Kampanya ilerlemesi güncelleniyor. Toplam kampanya: ${campaigns.length}');
+
+      for (final campaign in campaigns) {
+        if (campaign.id == null) {
+          print('Kampanya ID null, atlanıyor');
+          continue;
+        }
+
+        // Kampanyanın uygulanabilir ürünlerini kontrol et
+        for (final orderItem in order.items) {
+          bool shouldUpdate = false;
+
+          if (campaign.applicableMenuItemId == null) {
+            // Tüm ürünler için kampanya
+            shouldUpdate = true;
+          } else if (campaign.applicableMenuItemId == orderItem.menuItemId) {
+            // Belirli ürün için kampanya
+            shouldUpdate = true;
+          }
+
+          if (shouldUpdate) {
+            print('Kampanya ilerlemesi güncelleniyor: ${campaign.title}, Müşteri: ${order.customerId}, Miktar: ${orderItem.quantity}');
+            // Kampanya ilerlemesini güncelle
+            await _campaignService.updateProgress(
+              customerId: order.customerId,
+              campaignId: campaign.id!,
+              businessId: order.businessId,
+              quantity: orderItem.quantity,
+            );
+            print('Kampanya ilerlemesi güncellendi: ${campaign.title}');
+          }
+        }
+      }
+    } catch (e) {
+      // Kampanya güncelleme hatası kritik değil, sadece log
+      print('Kampanya ilerlemesi güncellenirken hata: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kampanya ilerlemesi güncellenirken hata: $e'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
