@@ -68,7 +68,20 @@ Her menü öğesi ayrı bir doküman olarak saklanacak. `businessId` field'ı il
 6. Bölge seçin (örn: europe-west1)
 7. **Enable** butonuna tıklayın
 
+### 1.1. Firebase Storage Oluşturma (ÖNEMLİ!)
+Fotoğraf yükleme özelliği için Firebase Storage'ı etkinleştirmeniz gerekmektedir:
+
+1. Firebase Console'da sol menüden **Storage**'a tıklayın
+2. **Get started** butonuna tıklayın
+3. **Start in test mode** seçeneğini seçin (geliştirme için)
+4. Storage bucket lokasyonunu seçin (Firestore ile aynı bölgeyi seçmeniz önerilir)
+5. **Done** butonuna tıklayın
+
+**Not:** Eğer Storage zaten etkinleştirilmişse, bu adımları atlayabilirsiniz. Ancak güvenlik kurallarını kontrol ettiğinizden emin olun.
+
 ### 2. Güvenlik Kuralları (Security Rules)
+
+#### 2.1. Firestore Güvenlik Kuralları
 Firestore Database > Rules sekmesine gidin ve şu kuralları ekleyin:
 
 ```javascript
@@ -154,6 +167,56 @@ service cloud.firestore {
                              request.resource.data.customerId == request.auth.uid;
       // Yorum silinemez
       allow delete: if false;
+    }
+  }
+}
+```
+
+#### 2.2. Firebase Storage Güvenlik Kuralları
+Storage > Rules sekmesine gidin ve şu kuralları ekleyin:
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Menü öğesi fotoğrafları
+    match /menu_items/{businessId}/{menuItemId}/{fileName} {
+      // Herkes okuyabilir (müşteriler menüyü görebilmeli)
+      allow read: if request.auth != null;
+      
+      // Sadece işletme sahibi yükleyebilir ve silebilir
+      // businessId path'teki değer ile kullanıcı UID'si eşleşmeli
+      allow write: if request.auth != null && 
+                   request.auth.uid == businessId &&
+                   request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+                   request.resource.contentType.matches('image/.*');
+      
+      // Silme işlemi için de aynı kontrol
+      allow delete: if request.auth != null && 
+                     request.auth.uid == businessId;
+    }
+    
+    // Diğer dosyalar için varsayılan kural (gerekirse ekleyebilirsiniz)
+    match /{allPaths=**} {
+      allow read, write: if false; // Varsayılan olarak erişim yok
+    }
+  }
+}
+```
+
+**Önemli Notlar:**
+- `businessId` path parametresi ile kullanıcı UID'si eşleşmelidir
+- Dosya boyutu 5MB ile sınırlandırılmıştır (gerekirse artırılabilir)
+- Sadece resim dosyaları yüklenebilir (`image/*` content type)
+- Geliştirme aşamasında test modu kullanıyorsanız, kurallar daha esnek olabilir
+
+**Test Modu için Basit Kural (Sadece Geliştirme):**
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

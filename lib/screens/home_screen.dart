@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'qr_code_scanner_screen.dart';
 import 'customer_orders_screen.dart';
+import 'ai_assistant_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'storage_service.dart';
 
 class MenuCategory {
   final String id;
@@ -112,6 +113,7 @@ class MenuItem {
 
 class MenuService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final StorageService _storageService = StorageService();
 
   // Menü dokümanını oluştur veya güncelle
   Future<void> createOrUpdateMenu({
@@ -209,12 +211,43 @@ class MenuService {
     }
   }
 
-  // Menü öğesini sil
+  // Menü öğesini sil (Firestore ve Storage'dan)
   Future<void> deleteMenuItem(String itemId) async {
     try {
+      // Önce menü öğesini al (fotoğraf URL'si için)
+      final menuItem = await getMenuItemById(itemId);
+      
+      // Fotoğraf varsa Storage'dan sil
+      if (menuItem != null && menuItem.imageUrl != null && menuItem.imageUrl!.isNotEmpty) {
+        try {
+          await _storageService.deleteMenuItemImage(menuItem.imageUrl!);
+        } catch (e) {
+          // Fotoğraf silme hatası kritik değil, devam et
+          print('Menü öğesi fotoğrafı silinirken hata: $e');
+        }
+      }
+      
+      // Firestore'dan sil
       await _firestore.collection('menuItems').doc(itemId).delete();
     } catch (e) {
       throw 'Menü öğesi silinirken hata oluştu: $e';
+    }
+  }
+  
+  // Kategoriye ait tüm menü öğelerini sil (kategori silinirken kullanılır)
+  Future<void> deleteMenuItemsByCategory(String businessId, String categoryId) async {
+    try {
+      // Kategoriye ait tüm menü öğelerini al
+      final items = await getMenuItemsByCategory(businessId, categoryId);
+      
+      // Her bir öğeyi sil (fotoğrafları da dahil)
+      for (final item in items) {
+        if (item.id != null) {
+          await deleteMenuItem(item.id!);
+        }
+      }
+    } catch (e) {
+      throw 'Kategori menü öğeleri silinirken hata oluştu: $e';
     }
   }
 

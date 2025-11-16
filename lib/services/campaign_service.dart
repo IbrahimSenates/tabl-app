@@ -181,9 +181,28 @@ class CampaignService {
     }
   }
 
-  // Kampanya sil
+  // Kampanya sil (Firestore'dan kampanyayı ve ilgili campaignProgress kayıtlarını sil)
   Future<void> deleteCampaign(String campaignId) async {
     try {
+      // Önce bu kampanyaya ait tüm campaignProgress kayıtlarını bul ve sil
+      try {
+        final progressSnapshot = await _firestore
+            .collection('campaignProgress')
+            .where('campaignId', isEqualTo: campaignId)
+            .get();
+        
+        // Tüm ilerleme kayıtlarını sil
+        final batch = _firestore.batch();
+        for (final doc in progressSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      } catch (e) {
+        // İlerleme kayıtları silme hatası kritik değil, logla ve devam et
+        print('Kampanya ilerleme kayıtları silinirken hata: $e');
+      }
+      
+      // Kampanyayı sil
       await _firestore.collection('campaigns').doc(campaignId).delete();
     } catch (e) {
       throw 'Kampanya silinirken hata oluştu: $e';

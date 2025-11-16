@@ -3,6 +3,7 @@ import '../services/menu_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import 'menu_item_form_screen.dart';
+import 'category_management_screen.dart';
 
 class MenuManagementScreen extends StatefulWidget {
   const MenuManagementScreen({super.key});
@@ -169,7 +170,17 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.category),
-            onPressed: () => _showCategoryDialog(),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CategoryManagementScreen(),
+                ),
+              );
+              if (result == true) {
+                _loadData();
+              }
+            },
             tooltip: 'Kategori Yönetimi',
           ),
         ],
@@ -255,118 +266,232 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
                             final item = _filteredMenuItems[index];
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: item.isAvailable
-                                      ? Colors.green
-                                      : Colors.grey,
-                                  child: Icon(
-                                    item.isAvailable
-                                        ? Icons.check
-                                        : Icons.close,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                title: Text(
-                                  item.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    decoration: item.isAvailable
-                                        ? null
-                                        : TextDecoration.lineThrough,
-                                  ),
-                                ),
-                                subtitle: Column(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(item.description),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Chip(
-                                          label: Text(
-                                            item.categoryName,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          padding: EdgeInsets.zero,
+                                    // Ürün fotoğrafı veya placeholder
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: item.isAvailable
+                                              ? Colors.green
+                                              : Colors.grey,
+                                          width: 2,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '${item.price.toStringAsFixed(2)} ₺',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.orange,
+                                      ),
+                                      child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Image.network(
+                                                item.imageUrl!,
+                                                width: 80,
+                                                height: 80,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Icon(
+                                                    Icons.restaurant,
+                                                    color: Colors.orange[700],
+                                                    size: 32,
+                                                  );
+                                                },
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) return child;
+                                                  return Center(
+                                                    child: CircularProgressIndicator(
+                                                      value: loadingProgress.expectedTotalBytes != null
+                                                          ? loadingProgress.cumulativeBytesLoaded /
+                                                              loadingProgress.expectedTotalBytes!
+                                                          : null,
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.restaurant,
+                                                  color: Colors.orange[700],
+                                                  size: 32,
+                                                ),
+                                                if (!item.isAvailable)
+                                                  Positioned(
+                                                    top: 4,
+                                                    right: 4,
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(2),
+                                                      decoration: const BoxDecoration(
+                                                        color: Colors.grey,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.close,
+                                                        color: Colors.white,
+                                                        size: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  item.name,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    decoration: item.isAvailable
+                                                        ? null
+                                                        : TextDecoration.lineThrough,
+                                                    color: item.isAvailable
+                                                        ? null
+                                                        : Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (!item.isAvailable)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[300],
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: const Text(
+                                                    'Mevcut Değil',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
+                                          if (item.description.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              item.description,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey[600],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Chip(
+                                                label: Text(
+                                                  item.categoryName,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '${item.price.toStringAsFixed(2)} ₺',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.orange,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuButton(
+                                      itemBuilder: (context) => [
+                                        PopupMenuItem(
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                item.isAvailable
+                                                    ? Icons.visibility_off
+                                                    : Icons.visibility,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                item.isAvailable
+                                                    ? 'Mevcut Değil Yap'
+                                                    : 'Mevcut Yap',
+                                              ),
+                                            ],
+                                          ),
+                                          onTap: () =>
+                                              _toggleItemAvailability(item),
+                                        ),
+                                        PopupMenuItem(
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.edit, size: 20),
+                                              SizedBox(width: 8),
+                                              Text('Düzenle'),
+                                            ],
+                                          ),
+                                          onTap: () async {
+                                            final result = await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    MenuItemFormScreen(
+                                                      businessId: item.businessId,
+                                                      categories: _categories,
+                                                      menuItem: item,
+                                                    ),
+                                              ),
+                                            );
+                                            if (result == true) {
+                                              _loadData();
+                                            }
+                                          },
+                                        ),
+                                        PopupMenuItem(
+                                          child: const Row(
+                                            children: [
+                                              Icon(
+                                                Icons.delete,
+                                                size: 20,
+                                                color: Colors.red,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Sil',
+                                                style: TextStyle(color: Colors.red),
+                                              ),
+                                            ],
+                                          ),
+                                          onTap: () => _deleteMenuItem(item),
                                         ),
                                       ],
-                                    ),
-                                  ],
-                                ),
-                                trailing: PopupMenuButton(
-                                  itemBuilder: (context) => [
-                                    PopupMenuItem(
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            item.isAvailable
-                                                ? Icons.visibility_off
-                                                : Icons.visibility,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            item.isAvailable
-                                                ? 'Mevcut Değil Yap'
-                                                : 'Mevcut Yap',
-                                          ),
-                                        ],
-                                      ),
-                                      onTap: () =>
-                                          _toggleItemAvailability(item),
-                                    ),
-                                    PopupMenuItem(
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.edit, size: 20),
-                                          SizedBox(width: 8),
-                                          Text('Düzenle'),
-                                        ],
-                                      ),
-                                      onTap: () async {
-                                        final result = await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                MenuItemFormScreen(
-                                                  businessId: item.businessId,
-                                                  categories: _categories,
-                                                  menuItem: item,
-                                                ),
-                                          ),
-                                        );
-                                        if (result == true) {
-                                          _loadData();
-                                        }
-                                      },
-                                    ),
-                                    PopupMenuItem(
-                                      child: const Row(
-                                        children: [
-                                          Icon(
-                                            Icons.delete,
-                                            size: 20,
-                                            color: Colors.red,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Sil',
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ],
-                                      ),
-                                      onTap: () => _deleteMenuItem(item),
                                     ),
                                   ],
                                 ),
@@ -931,85 +1056,193 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
         .where((item) => item.categoryId == category.id)
         .toList();
 
+    bool deleteItems = false;
+
     if (itemsInCategory.isNotEmpty) {
-      final confirmed = await showDialog<bool>(
+      // Kategoride ürün varsa, kullanıcıya seçenek sun
+      final result = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Kategori Silinemez'),
+          title: const Text('Kategori Silme'),
           content: Text(
-            'Bu kategoride ${itemsInCategory.length} menü öğesi bulunmaktadır. '
-            'Kategoriyi silmek için önce bu menü öğelerini silmeniz veya başka bir kategoriye taşımanız gerekmektedir.',
+            'Bu kategoride ${itemsInCategory.length} menü öğesi bulunmaktadır.\n\n'
+            'Kategoriyi silmek için ne yapmak istersiniz?',
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Tamam'),
+              onPressed: () => Navigator.pop(context, 'cancel'),
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'delete_items'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Ürünlerle Birlikte Sil'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'keep_items'),
+              child: const Text('Sadece Kategoriyi Sil'),
             ),
           ],
         ),
       );
-      return;
-    }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Kategoriyi Sil'),
-        content: Text(
-          '${category.name} kategorisini silmek istediğinize emin misiniz?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+      if (result == null || result == 'cancel') {
+        return;
+      }
+
+      if (result == 'delete_items') {
+        // Kullanıcı ürünlerle birlikte silmek istiyor
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Onay'),
+            content: Text(
+              '${category.name} kategorisini ve içindeki ${itemsInCategory.length} ürünü '
+              'silmek istediğinize emin misiniz?\n\n'
+              'Bu işlem geri alınamaz!',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Sil'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Sil'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        final user = _authService.currentUser;
-        if (user == null) return;
-
-        final filteredCategories = _categories
-            .where((cat) => cat.id != category.id)
-            .toList();
-
-        // Order değerlerini yeniden düzenle
-        final updatedCategories = filteredCategories.asMap().entries.map((
-          entry,
-        ) {
-          final index = entry.key;
-          final cat = entry.value;
-          return MenuCategory(id: cat.id, name: cat.name, order: index + 1);
-        }).toList();
-
-        await _menuService.saveCategories(
-          businessId: user.uid,
-          categories: updatedCategories,
         );
 
+        if (confirmed != true) {
+          return;
+        }
+
+        deleteItems = true;
+      } else if (result == 'keep_items') {
+        // Kullanıcı sadece kategoriyi silmek istiyor (ürünler kalacak)
+        // Bu durumda ürünlerin categoryId'sini null yapmak veya başka bir kategoriye taşımak gerekir
+        // Şimdilik sadece kategoriyi siliyoruz, ürünlerin categoryId'si boş kalacak
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Uyarı'),
+            content: Text(
+              'Kategori silindiğinde, bu kategorideki ${itemsInCategory.length} ürünün '
+              'kategorisi boş kalacaktır. Ürünler silinmeyecektir.\n\n'
+              'Devam etmek istiyor musunuz?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                child: const Text('Devam Et'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          return;
+        }
+      }
+    } else {
+      // Kategoride ürün yok, direkt sil
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Kategoriyi Sil'),
+          content: Text(
+            '${category.name} kategorisini silmek istediğinize emin misiniz?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Sil'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    // Silme işlemini gerçekleştir
+    try {
+      final user = _authService.currentUser;
+      if (user == null) return;
+
+      // Eğer ürünlerle birlikte silinecekse, önce ürünleri sil
+      if (deleteItems && itemsInCategory.isNotEmpty) {
+        setState(() {
+          _isLoading = true;
+        });
+
+        // Kategorideki tüm ürünleri ve fotoğraflarını sil
+        await _menuService.deleteMenuItemsByCategory(user.uid, category.id);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Kategori silindi'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: Text('${itemsInCategory.length} ürün ve fotoğrafları silindi'),
+              backgroundColor: Colors.orange,
             ),
           );
-          _loadData();
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
-          );
-        }
+      }
+
+      // Kategoriyi sil
+      final filteredCategories = _categories
+          .where((cat) => cat.id != category.id)
+          .toList();
+
+      // Order değerlerini yeniden düzenle
+      final updatedCategories = filteredCategories.asMap().entries.map((
+        entry,
+      ) {
+        final index = entry.key;
+        final cat = entry.value;
+        return MenuCategory(id: cat.id, name: cat.name, order: index + 1);
+      }).toList();
+
+      await _menuService.saveCategories(
+        businessId: user.uid,
+        categories: updatedCategories,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kategori silindi'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }

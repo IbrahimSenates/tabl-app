@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../services/menu_service.dart';
+import '../services/storage_service.dart';
 
 class MenuItemFormScreen extends StatefulWidget {
   final String businessId;
@@ -24,9 +27,13 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _menuService = MenuService();
+  final _storageService = StorageService();
   bool _isLoading = false;
   String? _selectedCategoryId;
   bool _isAvailable = true;
+  File? _selectedImageFile;
+  String? _currentImageUrl;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -37,6 +44,7 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
       _priceController.text = widget.menuItem!.price.toStringAsFixed(2);
       _selectedCategoryId = widget.menuItem!.categoryId;
       _isAvailable = widget.menuItem!.isAvailable;
+      _currentImageUrl = widget.menuItem!.imageUrl;
     } else if (widget.categories.isNotEmpty) {
       _selectedCategoryId = widget.categories.first.id;
     }
@@ -48,6 +56,58 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Fotoğraf Seç'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeriden Seç'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Kameradan Çek'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      final XFile? image = await _storageService.pickImage(source: source);
+      if (image != null) {
+        setState(() {
+          _selectedImageFile = File(image.path);
+          _currentImageUrl = null; // Yeni resim seçildi, eski URL'i temizle
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Resim seçilirken hata: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeImage() async {
+    setState(() {
+      _selectedImageFile = null;
+      _currentImageUrl = null;
+    });
   }
 
   Future<void> _saveMenuItem() async {
@@ -78,6 +138,52 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
         throw 'Geçerli bir fiyat girin';
       }
 
+      String? imageUrl = _currentImageUrl;
+
+      // Yeni resim seçildiyse yükle
+      if (_selectedImageFile != null) {
+        setState(() {
+          _isUploadingImage = true;
+        });
+
+        // Önce menü öğesini oluştur (ID almak için) - sadece yeni öğe ise
+        String? menuItemId = widget.menuItem?.id;
+        if (menuItemId == null) {
+          // Yeni öğe ekle (resim olmadan)
+          final tempMenuItem = MenuItem(
+            businessId: widget.businessId,
+            name: _nameController.text.trim(),
+            description: _descriptionController.text.trim(),
+            price: price,
+            categoryId: _selectedCategoryId!,
+            categoryName: selectedCategory.name,
+            isAvailable: _isAvailable,
+            order: 0,
+          );
+          menuItemId = await _menuService.addMenuItem(tempMenuItem);
+        }
+
+        // Eski resmi sil (varsa ve güncelleme yapılıyorsa)
+        if (widget.menuItem != null && widget.menuItem!.imageUrl != null) {
+          try {
+            await _storageService.deleteMenuItemImage(widget.menuItem!.imageUrl!);
+          } catch (e) {
+            print('Eski resim silinirken hata: $e');
+          }
+        }
+
+        // Yeni resmi yükle
+        imageUrl = await _storageService.uploadMenuItemImage(
+          businessId: widget.businessId,
+          menuItemId: menuItemId!,
+          imageFile: _selectedImageFile!,
+        );
+
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+
       final menuItem = MenuItem(
         id: widget.menuItem?.id,
         businessId: widget.businessId,
@@ -86,13 +192,16 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
         price: price,
         categoryId: _selectedCategoryId!,
         categoryName: selectedCategory.name,
+        imageUrl: imageUrl,
         isAvailable: _isAvailable,
         order: widget.menuItem?.order ?? 0,
       );
 
-      if (widget.menuItem == null) {
+      if (widget.menuItem == null && _selectedImageFile == null) {
+        // Yeni öğe ve resim yok, direkt ekle
         await _menuService.addMenuItem(menuItem);
-      } else {
+      } else if (widget.menuItem != null || _selectedImageFile != null) {
+        // Güncelle (resim yüklendiyse veya mevcut öğe güncelleniyorsa)
         await _menuService.updateMenuItem(menuItem);
       }
 
@@ -112,6 +221,7 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _isUploadingImage = false;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,6 +249,102 @@ class _MenuItemFormScreenState extends State<MenuItemFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Fotoğraf seçimi
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: _selectedImageFile != null
+                    ? Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              _selectedImageFile!,
+                              width: double.infinity,
+                              height: 200,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: _removeImage,
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : _currentImageUrl != null
+                        ? Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  _currentImageUrl!,
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        size: 64,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.white),
+                                  onPressed: _removeImage,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.black54,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_photo_alternate,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Ürün Fotoğrafı',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton.icon(
+                                  onPressed: _pickImage,
+                                  icon: const Icon(Icons.photo_library),
+                                  label: const Text('Fotoğraf Seç'),
+                                ),
+                              ],
+                            ),
+                          ),
+              ),
+              const SizedBox(height: 16),
+
               // Ad alanı
               TextFormField(
                 controller: _nameController,

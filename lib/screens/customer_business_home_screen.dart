@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../models/cart_item.dart';
 import 'cart_screen.dart';
 import 'order_review_screen.dart';
+import 'ai_assistant_screen.dart';
 
 class CustomerBusinessHomeScreen extends StatefulWidget {
   final String businessId;
@@ -30,6 +31,7 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   late TabController _tabController;
   String? _businessName;
   List<CartItem> _cartItems = [];
+  Offset _aiButtonPosition = const Offset(16, 0); // AI buton pozisyonu
 
   @override
   void initState() {
@@ -128,18 +130,70 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Stack(
         children: [
-          _MenuTab(
-            businessId: widget.businessId,
-            onAddToCart: _addToCart,
+          TabBarView(
+            controller: _tabController,
+            children: [
+              _MenuTab(
+                businessId: widget.businessId,
+                onAddToCart: _addToCart,
+              ),
+              _CampaignsTab(
+                businessId: widget.businessId,
+              ),
+              _OrdersTab(
+                businessId: widget.businessId,
+              ),
+            ],
           ),
-          _CampaignsTab(
-            businessId: widget.businessId,
-          ),
-          _OrdersTab(
-            businessId: widget.businessId,
+          // AI Asistan butonu - sürüklenebilir
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final buttonSize = 56.0; // FloatingActionButton boyutu
+              final bottomOffset = _cartItemCount > 0 ? 80.0 : 16.0;
+              
+              return Positioned(
+                left: _aiButtonPosition.dx.clamp(0.0, constraints.maxWidth - buttonSize),
+                bottom: (_aiButtonPosition.dy + bottomOffset).clamp(
+                  bottomOffset, 
+                  constraints.maxHeight - buttonSize + bottomOffset
+                ),
+                child: GestureDetector(
+                  onPanUpdate: (details) {
+                    setState(() {
+                      // Yeni pozisyonu hesapla
+                      double newX = _aiButtonPosition.dx + details.delta.dx;
+                      double newY = _aiButtonPosition.dy - details.delta.dy;
+                      
+                      // Ekran sınırları içinde tut
+                      newX = newX.clamp(0.0, constraints.maxWidth - buttonSize);
+                      newY = newY.clamp(0.0, constraints.maxHeight - buttonSize - bottomOffset);
+                      
+                      _aiButtonPosition = Offset(newX, newY);
+                    });
+                  },
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AIAssistantScreen(
+                            businessId: widget.businessId,
+                          ),
+                        ),
+                      );
+                    },
+                    backgroundColor: Colors.orange,
+                    child: Icon(
+                      Icons.smart_toy,
+                      color: Colors.white,
+                    ),
+                    tooltip: 'AI Asistan',
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -402,18 +456,47 @@ class _MenuTabState extends State<_MenuTab> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Ürün fotoğrafı veya placeholder
                             Container(
-                              width: 60,
-                              height: 60,
+                              width: 80,
+                              height: 80,
                               decoration: BoxDecoration(
                                 color: Colors.orange[100],
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(
-                                Icons.restaurant,
-                                color: Colors.orange[700],
-                                size: 32,
-                              ),
+                              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        item.imageUrl!,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Icon(
+                                            Icons.restaurant,
+                                            color: Colors.orange[700],
+                                            size: 32,
+                                          );
+                                        },
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded /
+                                                      loadingProgress.expectedTotalBytes!
+                                                  : null,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.restaurant,
+                                      color: Colors.orange[700],
+                                      size: 32,
+                                    ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
