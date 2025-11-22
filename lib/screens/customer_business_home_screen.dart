@@ -24,7 +24,7 @@ class CustomerBusinessHomeScreen extends StatefulWidget {
 }
 
 class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _menuService = MenuService();
   final _campaignService = CampaignService();
   final _orderService = OrderService();
@@ -39,6 +39,7 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Observer ekle
     _tabController = TabController(length: 3, vsync: this);
     _loadBusinessInfo();
     _initSession();
@@ -76,7 +77,21 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      // Uygulama arka plana atıldığında veya kapatıldığında oturumu sonlandır
+      _sessionService.endSession(widget.businessId);
+    } else if (state == AppLifecycleState.resumed) {
+      // Uygulama tekrar açıldığında oturumu yenile
+      _sessionService.createOrUpdateSession(businessId: widget.businessId);
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Observer kaldır
+    _sessionService.endSession(widget.businessId); // Sayfa kapandığında oturumu sonlandır
     _tabController.dispose();
     super.dispose();
   }
