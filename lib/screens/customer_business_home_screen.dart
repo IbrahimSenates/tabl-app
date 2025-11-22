@@ -9,6 +9,8 @@ import 'cart_screen.dart';
 import 'order_review_screen.dart';
 import 'ai_assistant_screen.dart';
 
+import '../services/session_service.dart';
+
 class CustomerBusinessHomeScreen extends StatefulWidget {
   final String businessId;
 
@@ -27,6 +29,7 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   final _campaignService = CampaignService();
   final _orderService = OrderService();
   final _authService = AuthService();
+  final _sessionService = SessionService(); // SessionService instance
   
   late TabController _tabController;
   String? _businessName;
@@ -38,6 +41,38 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadBusinessInfo();
+    _initSession();
+  }
+
+  Future<void> _initSession() async {
+    try {
+      // Eğer kullanıcı giriş yapmamışsa anonim giriş yap
+      if (_authService.currentUser == null) {
+        await _authService.signInAnonymously();
+      }
+      // Oturumu başlat
+      await _sessionService.createOrUpdateSession(businessId: widget.businessId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oturum başarıyla başlatıldı'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Oturum hatası: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   @override

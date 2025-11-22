@@ -45,6 +45,16 @@ class AuthService {
     }
   }
 
+  // Anonim giriş yap
+  Future<UserCredential?> signInAnonymously() async {
+    try {
+      return await _auth.signInAnonymously();
+    } catch (e) {
+      print('Anonim giriş hatası: $e');
+      return null;
+    }
+  }
+
   // Çıkış yap
   Future<void> signOut() async {
     try {
