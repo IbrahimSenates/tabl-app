@@ -180,30 +180,30 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
           ],
         ),
       ),
-      body: Stack(
-        children: [
-          TabBarView(
-            controller: _tabController,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final buttonSize = 56.0; // FloatingActionButton boyutu
+          final bottomOffset = _cartItemCount > 0 ? 80.0 : 16.0;
+          
+          return Stack(
             children: [
-              _MenuTab(
-                businessId: widget.businessId,
-                onAddToCart: _addToCart,
+              TabBarView(
+                controller: _tabController,
+                children: [
+                  _MenuTab(
+                    businessId: widget.businessId,
+                    onAddToCart: _addToCart,
+                  ),
+                  _CampaignsTab(
+                    businessId: widget.businessId,
+                  ),
+                  _OrdersTab(
+                    businessId: widget.businessId,
+                  ),
+                ],
               ),
-              _CampaignsTab(
-                businessId: widget.businessId,
-              ),
-              _OrdersTab(
-                businessId: widget.businessId,
-              ),
-            ],
-          ),
-          // AI Asistan butonu - sürüklenebilir
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final buttonSize = 56.0; // FloatingActionButton boyutu
-              final bottomOffset = _cartItemCount > 0 ? 80.0 : 16.0;
-              
-              return Positioned(
+              // AI Asistan butonu - sürüklenebilir
+              Positioned(
                 left: _aiButtonPosition.dx.clamp(0.0, constraints.maxWidth - buttonSize),
                 bottom: (_aiButtonPosition.dy + bottomOffset).clamp(
                   bottomOffset, 
@@ -242,10 +242,10 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
                     tooltip: 'AI Asistan',
                   ),
                 ),
-              );
-            },
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButton: _cartItemCount > 0
           ? FloatingActionButton.extended(

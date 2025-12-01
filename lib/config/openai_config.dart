@@ -1,6 +1,7 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class OpenAIConfig {
-  static const String apiKey =
-      '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';
+  static String get apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
 
   static const String apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
 

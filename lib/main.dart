@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -9,10 +10,8 @@ import 'services/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Firebase'i başlat
-  // Not: Firebase yapılandırma dosyalarını (google-services.json ve GoogleService-Info.plist)
-  // Firebase Console'dan indirip projeye eklemeniz gerekiyor
   await Firebase.initializeApp();
+  await dotenv.load(fileName: ".env");
   
   runApp(const MyApp());
 }
