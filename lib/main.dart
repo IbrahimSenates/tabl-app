@@ -4,9 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/business_home_screen.dart';
 import 'services/auth_service.dart';
-import 'services/user_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +42,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
-        '/business': (context) => const BusinessHomeScreen(),
       },
     );
   }
@@ -56,7 +53,6 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    final userService = UserService();
 
     return StreamBuilder<User?>(
       stream: authService.authStateChanges,
@@ -70,31 +66,9 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // Kullanıcı giriş yapmışsa kullanıcı tipine göre yönlendir
+        // Kullanıcı giriş yapmışsa ana ekrana yönlendir
         if (authSnapshot.hasData && authSnapshot.data != null) {
-          final userId = authSnapshot.data!.uid;
-          
-          return FutureBuilder<UserType?>(
-            future: userService.getUserType(userId),
-            builder: (context, userTypeSnapshot) {
-              // Kullanıcı tipi yükleniyor
-              if (userTypeSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-
-              // Kullanıcı tipine göre yönlendir
-              final userType = userTypeSnapshot.data;
-              if (userType == UserType.business) {
-                return const BusinessHomeScreen();
-              } else {
-                return const HomeScreen();
-              }
-            },
-          );
+          return const HomeScreen();
         }
 
         // Kullanıcı giriş yapmamışsa giriş ekranına yönlendir

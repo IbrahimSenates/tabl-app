@@ -18,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _userService = UserService();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  UserType _selectedUserType = UserType.customer;
 
   @override
   void dispose() {
@@ -38,66 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-
-        // Kullanıcı tipini kontrol et
-        if (userCredential?.user != null) {
-          try {
-            final userType = await _userService.getUserType(userCredential!.user!.uid);
-            
-            // Kullanıcı tipi kontrolü
-            if (userType == null) {
-              // Firestore'da kullanıcı kaydı yoksa
-              await _authService.signOut();
-              
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                });
-                
-                _showErrorDialog(
-                  title: 'Kullanıcı Bulunamadı',
-                  message: _selectedUserType == UserType.business
-                      ? 'Bu e-posta adresine kayıtlı bir işletme hesabı bulunamadı.\n\nLütfen doğru hesap tipini seçip tekrar deneyin veya kayıt olun.'
-                      : 'Bu e-posta adresine kayıtlı bir müşteri hesabı bulunamadı.\n\nLütfen doğru hesap tipini seçip tekrar deneyin veya kayıt olun.',
-                );
-                return;
-              }
-            }
-            
-            // Kullanıcı tipi uyuşmuyorsa çıkış yap ve hata göster
-            if (userType != _selectedUserType) {
-              await _authService.signOut();
-              
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                });
-                
-                _showErrorDialog(
-                  title: 'Hesap Tipi Uyuşmazlığı',
-                  message: _selectedUserType == UserType.business
-                      ? 'Bu e-posta adresine kayıtlı bir işletme hesabı bulunamadı.\n\nBu e-posta adresi bir müşteri hesabına ait. Lütfen "Müşteri" seçeneğini seçip tekrar deneyin.'
-                      : 'Bu e-posta adresine kayıtlı bir müşteri hesabı bulunamadı.\n\nBu e-posta adresi bir işletme hesabına ait. Lütfen "İşletme" seçeneğini seçip tekrar deneyin.',
-                );
-                return;
-              }
-            }
-          } catch (userTypeError) {
-            // Firestore hatası durumunda çıkış yap ve hata göster
-            await _authService.signOut();
-            
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              _showErrorDialog(
-                title: 'Hata',
-                message: 'Kullanıcı bilgileri alınırken bir hata oluştu. Lütfen tekrar deneyin.',
-              );
-              return;
-            }
-          }
-        }
 
         // Başarılı giriş durumunda authStateChanges stream'i otomatik olarak yönlendirecek
       } catch (e) {
@@ -151,60 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                   ),
                   const SizedBox(height: 32),
-                  
-                  // Kullanıcı tipi seçimi
-                  Text(
-                    'Giriş Tipi',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.person, size: 18),
-                              SizedBox(width: 8),
-                              Text('Müşteri'),
-                            ],
-                          ),
-                          selected: _selectedUserType == UserType.customer,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedUserType = UserType.customer;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.business, size: 18),
-                              SizedBox(width: 8),
-                              Text('İşletme'),
-                            ],
-                          ),
-                          selected: _selectedUserType == UserType.business,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedUserType = UserType.business;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 32),
                   
                   // E-posta alanı

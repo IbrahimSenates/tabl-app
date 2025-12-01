@@ -14,20 +14,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _businessNameController = TextEditingController();
   final _authService = AuthService();
   final _userService = UserService();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  UserType _selectedUserType = UserType.customer;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _businessNameController.dispose();
     super.dispose();
   }
 
@@ -48,10 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (userCredential?.user != null) {
           await _userService.saveUserType(
             userId: userCredential!.user!.uid,
-            userType: _selectedUserType,
-            businessName: _selectedUserType == UserType.business
-                ? _businessNameController.text.trim()
-                : null,
+            userType: UserType.customer,
           );
 
           // Başarılı kayıt mesajı göster
@@ -114,86 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Kullanıcı tipi seçimi
-                  Text(
-                    'Hesap Tipi',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.person, size: 18),
-                              SizedBox(width: 8),
-                              Text('Müşteri'),
-                            ],
-                          ),
-                          selected: _selectedUserType == UserType.customer,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedUserType = UserType.customer;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.business, size: 18),
-                              SizedBox(width: 8),
-                              Text('İşletme'),
-                            ],
-                          ),
-                          selected: _selectedUserType == UserType.business,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedUserType = UserType.business;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // İşletme adı alanı (sadece işletme seçildiğinde)
-                  if (_selectedUserType == UserType.business) ...[
-                    TextFormField(
-                      controller: _businessNameController,
-                      decoration: InputDecoration(
-                        labelText: 'İşletme Adı',
-                        hintText: 'İşletmenizin adını girin',
-                        prefixIcon: const Icon(Icons.business_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                      validator: (value) {
-                        if (_selectedUserType == UserType.business) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen işletme adınızı girin';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                  const SizedBox(height: 32),
 
                   // E-posta alanı
                   TextFormField(
