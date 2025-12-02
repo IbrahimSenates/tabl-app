@@ -76,6 +76,20 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  void _updateQuantity(CartItem item, int newQuantity) {
+    setState(() {
+      item.quantity = newQuantity;
+    });
+    _calculateFreeQuantities();
+  }
+
+  void _removeItem(CartItem item) {
+    setState(() {
+      widget.cartItems.remove(item);
+    });
+    _calculateFreeQuantities();
+  }
+
   void _calculateFreeQuantities() {
     final freeQuantities = <CartItem, int>{};
     
@@ -340,43 +354,144 @@ class _CartScreenState extends State<CartScreen> {
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.orange[100],
-                            child: Icon(
-                              Icons.restaurant,
-                              color: Colors.orange[700],
-                            ),
-                          ),
-                          title: Text(
-                            cartItem.menuItem.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
                             children: [
-                              if (paidQty > 0)
-                                Text(
-                                  '$paidQty x ${cartItem.menuItem.price.toStringAsFixed(2)} ₺',
-                                  style: TextStyle(color: Colors.grey[800]),
-                                ),
-                              if (freeQty > 0)
-                                Text(
-                                  '$freeQty x BEDAVA (Kampanya)',
-                                  style: TextStyle(
-                                    color: Colors.green[700],
-                                    fontWeight: FontWeight.bold,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Ürün Resmi / İkonu
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange[100],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: cartItem.menuItem.imageUrl != null &&
+                                            cartItem.menuItem.imageUrl!.isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              cartItem.menuItem.imageUrl!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => Icon(
+                                                Icons.restaurant,
+                                                color: Colors.orange[700],
+                                              ),
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.restaurant,
+                                            color: Colors.orange[700],
+                                          ),
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  // Ürün Bilgileri
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                cartItem.menuItem.name,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline,
+                                                  color: Colors.red),
+                                              onPressed: () =>
+                                                  _removeItem(cartItem),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        if (paidQty > 0)
+                                          Text(
+                                            '$paidQty x ${cartItem.menuItem.price.toStringAsFixed(2)} ₺',
+                                            style: TextStyle(
+                                                color: Colors.grey[800],
+                                                fontSize: 13),
+                                          ),
+                                        if (freeQty > 0)
+                                          Text(
+                                            '$freeQty x BEDAVA (Kampanya)',
+                                            style: TextStyle(
+                                              color: Colors.green[700],
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Miktar Kontrolü
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey[300]!),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.remove, size: 20),
+                                          onPressed: () {
+                                            if (cartItem.quantity > 1) {
+                                              _updateQuantity(
+                                                  cartItem, cartItem.quantity - 1);
+                                            } else {
+                                              _removeItem(cartItem);
+                                            }
+                                          },
+                                          padding: const EdgeInsets.all(8),
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                        Text(
+                                          '${cartItem.quantity}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.add, size: 20),
+                                          onPressed: () => _updateQuantity(
+                                              cartItem, cartItem.quantity + 1),
+                                          padding: const EdgeInsets.all(8),
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Toplam Fiyat
+                                  Text(
+                                    '${itemTotal.toStringAsFixed(2)} ₺',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
-                          ),
-                          trailing: Text(
-                            '${itemTotal.toStringAsFixed(2)} ₺',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.orange,
-                            ),
                           ),
                         ),
                       );
