@@ -594,49 +594,13 @@ class _MenuTabState extends State<_MenuTab> {
                                         ),
                                       ),
                                       const Spacer(),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          if (isFree)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.green[100],
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                'BEDAVA',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.green[900],
-                                                ),
-                                              ),
-                                            ),
-                                          if (isFree && item.price > 0)
-                                            Text(
-                                              '${item.price.toStringAsFixed(2)} ₺',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.grey[600],
-                                                decoration: TextDecoration.lineThrough,
-                                              ),
-                                            ),
-                                          Text(
-                                            isFree
-                                                ? '0.00 ₺'
-                                                : '${item.price.toStringAsFixed(2)} ₺',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: isFree ? Colors.green[700] : Colors.orange,
-                                            ),
-                                          ),
-                                        ],
+                                      Text(
+                                        '${item.price.toStringAsFixed(2)} ₺',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -652,9 +616,7 @@ class _MenuTabState extends State<_MenuTab> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      isFree
-                                          ? '${item.name} sepete eklendi (BEDAVA)'
-                                          : '${item.name} sepete eklendi',
+                                      '${item.name} sepete eklendi',
                                     ),
                                     backgroundColor: Colors.green,
                                     duration: const Duration(seconds: 2),

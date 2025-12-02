@@ -30,6 +30,7 @@ class _CartScreenState extends State<CartScreen> {
   bool _isPlacingOrder = false;
   Map<String, CampaignProgress> _campaignProgressMap = {};
   Map<String, Campaign> _activeCampaignsMap = {};
+  Map<CartItem, int> _itemFreeQuantities = {};
 
   @override
   void initState() {
@@ -67,66 +68,137 @@ class _CartScreenState extends State<CartScreen> {
         _activeCampaignsMap = campaignsMap;
         _campaignProgressMap = progressMap;
       });
+      
+      _calculateFreeQuantities();
     } catch (e) {
       // Hata durumunda devam et
       print('Kampanya verileri yüklenirken hata: $e');
     }
   }
 
-  // Ürün fiyatını hesapla (kampanya varsa 0)
-  double _getItemPrice(cartItem) {
-    final item = cartItem.menuItem;
+  void _calculateFreeQuantities() {
+    final freeQuantities = <CartItem, int>{};
+    
+    // Her kampanya için kalan bedava hakkını takip et
+    final campaignRemainingFree = <String, int>{};
+    
     for (final campaign in _activeCampaignsMap.values) {
       final progress = _campaignProgressMap[campaign.id ?? ''];
-      if (progress == null || !progress.isCompleted) continue;
-
-      if (campaign.applicableMenuItemId == null) {
-        // Tüm ürünler için kampanya
-        return 0.0;
-      } else if (campaign.applicableMenuItemId == item.id) {
-        // Belirli ürün için kampanya
-        return 0.0;
+      if (progress != null && progress.isCompleted) {
+        campaignRemainingFree[campaign.id!] = campaign.freeQuantity;
       }
     }
-    return item.price;
+
+    // Sepetteki her ürün için kontrol et
+    for (final cartItem in widget.cartItems) {
+      int freeQty = 0;
+      
+      for (final campaignId in campaignRemainingFree.keys) {
+        final campaign = _activeCampaignsMap[campaignId];
+        final remaining = campaignRemainingFree[campaignId] ?? 0;
+        
+        if (remaining <= 0) continue;
+        if (campaign == null) continue;
+
+        bool isApplicable = false;
+        if (campaign.applicableMenuItemId == null) {
+          // Tüm ürünler için geçerli
+          isApplicable = true;
+        } else if (campaign.applicableMenuItemId == cartItem.menuItem.id) {
+          // Belirli ürün için geçerli
+          isApplicable = true;
+        }
+
+        if (isApplicable) {
+          // Bu ürün için ne kadar bedava kullanabiliriz?
+          // Ürünün adedi ile kampanyadan kalan hak arasından küçük olanı al
+          final canTake = (cartItem.quantity - freeQty).clamp(0, remaining);
+          
+          if (canTake > 0) {
+            freeQty += canTake;
+            campaignRemainingFree[campaignId] = remaining - canTake;
+          }
+        }
+      }
+      
+      freeQuantities[cartItem] = freeQty;
+    }
+
+    setState(() {
+      _itemFreeQuantities = freeQuantities;
+    });
   }
 
   double get _totalAmount {
     return widget.cartItems.fold(0.0, (sum, cartItem) {
-      final itemPrice = _getItemPrice(cartItem);
-      return sum + (itemPrice * cartItem.quantity);
+      final freeQty = _itemFreeQuantities[cartItem] ?? 0;
+      final paidQty = cartItem.quantity - freeQty;
+      return sum + (cartItem.menuItem.price * paidQty);
     });
   }
 
   // Kampanya tamamlandıysa ve bedava ürün kullanıldıysa ilerlemeyi sıfırla
   Future<void> _resetCampaignProgressIfUsed() async {
     try {
+      final usedCampaignIds = <String>{};
+
+      // Hangi kampanyaların kullanıldığını tespit et (basit bir yaklaşım)
+      // _calculateFreeQuantities mantığını tekrar çalıştırıp hangi kampanyadan düştüğünü bulabiliriz
+      // veya sadece bedava ürün varsa ve o ürünü kapsayan tamamlanmış kampanya varsa sıfırlarız.
+      
+      // Daha güvenli yaklaşım: Eğer toplamda herhangi bir bedava ürün kullandıysak,
+      // bu bedava ürünlerin kaynağı olan kampanyaları sıfırla.
+      
+      bool anyFreeUsed = _itemFreeQuantities.values.any((qty) => qty > 0);
+      if (!anyFreeUsed) return;
+
+      // Tekrar hesaplama yaparak hangi kampanyaların kullanıldığını bul
+      final campaignRemainingFree = <String, int>{};
+      for (final campaign in _activeCampaignsMap.values) {
+        final progress = _campaignProgressMap[campaign.id ?? ''];
+        if (progress != null && progress.isCompleted) {
+          campaignRemainingFree[campaign.id!] = campaign.freeQuantity;
+        }
+      }
+
       for (final cartItem in widget.cartItems) {
-        final itemPrice = _getItemPrice(cartItem);
-        if (itemPrice == 0.0) {
-          // Bedava ürün kullanıldı, ilgili kampanyaları bul ve ilerlemeyi sıfırla
-          for (final campaign in _activeCampaignsMap.values) {
-            final progress = _campaignProgressMap[campaign.id ?? ''];
-            if (progress == null || !progress.isCompleted) continue;
+        int neededFree = _itemFreeQuantities[cartItem] ?? 0;
+        if (neededFree <= 0) continue;
 
-            bool shouldReset = false;
-            if (campaign.applicableMenuItemId == null) {
-              // Tüm ürünler için kampanya
-              shouldReset = true;
-            } else if (campaign.applicableMenuItemId == cartItem.menuItem.id) {
-              // Belirli ürün için kampanya
-              shouldReset = true;
-            }
+        for (final campaignId in campaignRemainingFree.keys) {
+          if (neededFree <= 0) break;
+          
+          final campaign = _activeCampaignsMap[campaignId];
+          final remaining = campaignRemainingFree[campaignId] ?? 0;
+          
+          if (remaining <= 0) continue;
+          if (campaign == null) continue;
 
-            if (shouldReset && progress.id != null) {
-              // İlerlemeyi sıfırla
-              await _campaignService.resetProgress(progress.id!);
+          bool isApplicable = false;
+          if (campaign.applicableMenuItemId == null) {
+            isApplicable = true;
+          } else if (campaign.applicableMenuItemId == cartItem.menuItem.id) {
+            isApplicable = true;
+          }
+
+          if (isApplicable) {
+            final used = neededFree.clamp(0, remaining);
+            if (used > 0) {
+              usedCampaignIds.add(campaignId);
+              campaignRemainingFree[campaignId] = remaining - used;
+              neededFree -= used;
             }
           }
         }
       }
+
+      for (final campaignId in usedCampaignIds) {
+        final progress = _campaignProgressMap[campaignId];
+        if (progress != null && progress.id != null) {
+          await _campaignService.resetProgress(progress.id!);
+        }
+      }
     } catch (e) {
-      // Hata durumunda devam et
       print('Kampanya ilerlemesi sıfırlanırken hata: $e');
     }
   }
@@ -164,16 +236,32 @@ class _CartScreenState extends State<CartScreen> {
     });
 
     try {
-      final orderItems = widget.cartItems.map((cartItem) {
-        // Kampanya kontrolü yap - eğer bedava ise fiyatı 0 yap
-        final itemPrice = _getItemPrice(cartItem);
-        return OrderItem(
-          menuItemId: cartItem.menuItem.id ?? '',
-          name: cartItem.menuItem.name,
-          price: itemPrice, // Kampanya fiyatı
-          quantity: cartItem.quantity,
-        );
-      }).toList();
+      final orderItems = <OrderItem>[];
+      
+      for (final cartItem in widget.cartItems) {
+        final freeQty = _itemFreeQuantities[cartItem] ?? 0;
+        final paidQty = cartItem.quantity - freeQty;
+
+        // Ücretli kısım
+        if (paidQty > 0) {
+          orderItems.add(OrderItem(
+            menuItemId: cartItem.menuItem.id ?? '',
+            name: cartItem.menuItem.name,
+            price: cartItem.menuItem.price,
+            quantity: paidQty,
+          ));
+        }
+
+        // Bedava kısım
+        if (freeQty > 0) {
+          orderItems.add(OrderItem(
+            menuItemId: cartItem.menuItem.id ?? '',
+            name: '${cartItem.menuItem.name} (Kampanya)',
+            price: 0.0,
+            quantity: freeQty,
+          ));
+        }
+      }
 
       final order = Order(
         customerId: user.uid,
@@ -246,6 +334,10 @@ class _CartScreenState extends State<CartScreen> {
                     itemCount: widget.cartItems.length,
                     itemBuilder: (context, index) {
                       final cartItem = widget.cartItems[index];
+                      final freeQty = _itemFreeQuantities[cartItem] ?? 0;
+                      final paidQty = cartItem.quantity - freeQty;
+                      final itemTotal = paidQty * cartItem.menuItem.price;
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
@@ -260,52 +352,31 @@ class _CartScreenState extends State<CartScreen> {
                             cartItem.menuItem.name,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Builder(
-                            builder: (context) {
-                              final itemPrice = _getItemPrice(cartItem);
-                              final isFree = itemPrice == 0.0;
-                              final originalPrice = cartItem.menuItem.price;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (isFree && originalPrice > 0)
-                                    Text(
-                                      '${originalPrice.toStringAsFixed(2)} ₺ x ${cartItem.quantity}',
-                                      style: TextStyle(
-                                        decoration: TextDecoration.lineThrough,
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  Text(
-                                    isFree
-                                        ? '0.00 ₺ x ${cartItem.quantity} (BEDAVA)'
-                                        : '${itemPrice.toStringAsFixed(2)} ₺ x ${cartItem.quantity}',
-                                    style: TextStyle(
-                                      color: isFree ? Colors.green[700] : null,
-                                      fontWeight: isFree
-                                          ? FontWeight.bold
-                                          : null,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          trailing: Builder(
-                            builder: (context) {
-                              final itemPrice = _getItemPrice(cartItem);
-                              final itemTotal = itemPrice * cartItem.quantity;
-                              final isFree = itemPrice == 0.0;
-                              return Text(
-                                '${itemTotal.toStringAsFixed(2)} ₺',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: isFree ? Colors.green : Colors.orange,
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (paidQty > 0)
+                                Text(
+                                  '$paidQty x ${cartItem.menuItem.price.toStringAsFixed(2)} ₺',
+                                  style: TextStyle(color: Colors.grey[800]),
                                 ),
-                              );
-                            },
+                              if (freeQty > 0)
+                                Text(
+                                  '$freeQty x BEDAVA (Kampanya)',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Text(
+                            '${itemTotal.toStringAsFixed(2)} ₺',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.orange,
+                            ),
                           ),
                         ),
                       );
