@@ -3,6 +3,7 @@ import '../models/cart_item.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
 import '../services/campaign_service.dart';
+import '../services/payment_service.dart';
 
 class CartScreen extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -288,6 +289,30 @@ class _CartScreenState extends State<CartScreen> {
             : _noteController.text.trim(),
       );
 
+      // 1. Ödeme işlemi (Sadece tutar > 0 ise)
+      if (_totalAmount > 0) {
+        final paymentSuccess = await PaymentService.instance.makePayment(
+          _totalAmount,
+          'try', // Currency
+        );
+
+        if (!paymentSuccess) {
+          setState(() {
+            _isPlacingOrder = false;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Ödeme başarısız veya iptal edildi.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // 2. Sipariş oluşturma (Ödeme başarılıysa)
       await _orderService.createOrder(order);
 
       // Kampanya tamamlandıysa ve bedava ürün kullanıldıysa ilerlemeyi sıfırla

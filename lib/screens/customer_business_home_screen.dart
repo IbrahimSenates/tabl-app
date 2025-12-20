@@ -14,13 +14,11 @@ import '../services/session_service.dart';
 class CustomerBusinessHomeScreen extends StatefulWidget {
   final String businessId;
 
-  const CustomerBusinessHomeScreen({
-    super.key,
-    required this.businessId,
-  });
+  const CustomerBusinessHomeScreen({super.key, required this.businessId});
 
   @override
-  State<CustomerBusinessHomeScreen> createState() => _CustomerBusinessHomeScreenState();
+  State<CustomerBusinessHomeScreen> createState() =>
+      _CustomerBusinessHomeScreenState();
 }
 
 class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
@@ -30,7 +28,7 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   final _orderService = OrderService();
   final _authService = AuthService();
   final _sessionService = SessionService(); // SessionService instance
-  
+
   late TabController _tabController;
   String? _businessName;
   List<CartItem> _cartItems = [];
@@ -52,8 +50,10 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
         await _authService.signInAnonymously();
       }
       // Oturumu başlat
-      await _sessionService.createOrUpdateSession(businessId: widget.businessId);
-      
+      await _sessionService.createOrUpdateSession(
+        businessId: widget.businessId,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -79,7 +79,8 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       // Uygulama arka plana atıldığında veya kapatıldığında oturumu sonlandır
       _sessionService.endSession(widget.businessId);
     } else if (state == AppLifecycleState.resumed) {
@@ -91,7 +92,9 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); // Observer kaldır
-    _sessionService.endSession(widget.businessId); // Sayfa kapandığında oturumu sonlandır
+    _sessionService.endSession(
+      widget.businessId,
+    ); // Sayfa kapandığında oturumu sonlandır
     _tabController.dispose();
     super.dispose();
   }
@@ -184,7 +187,7 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
         builder: (context, constraints) {
           final buttonSize = 56.0; // FloatingActionButton boyutu
           final bottomOffset = _cartItemCount > 0 ? 80.0 : 16.0;
-          
+
           return Stack(
             children: [
               TabBarView(
@@ -194,20 +197,19 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
                     businessId: widget.businessId,
                     onAddToCart: _addToCart,
                   ),
-                  _CampaignsTab(
-                    businessId: widget.businessId,
-                  ),
-                  _OrdersTab(
-                    businessId: widget.businessId,
-                  ),
+                  _CampaignsTab(businessId: widget.businessId),
+                  _OrdersTab(businessId: widget.businessId),
                 ],
               ),
               // AI Asistan butonu - sürüklenebilir
               Positioned(
-                left: _aiButtonPosition.dx.clamp(0.0, constraints.maxWidth - buttonSize),
+                left: _aiButtonPosition.dx.clamp(
+                  0.0,
+                  constraints.maxWidth - buttonSize,
+                ),
                 bottom: (_aiButtonPosition.dy + bottomOffset).clamp(
-                  bottomOffset, 
-                  constraints.maxHeight - buttonSize + bottomOffset
+                  bottomOffset,
+                  constraints.maxHeight - buttonSize + bottomOffset,
                 ),
                 child: GestureDetector(
                   onPanUpdate: (details) {
@@ -215,30 +217,30 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
                       // Yeni pozisyonu hesapla
                       double newX = _aiButtonPosition.dx + details.delta.dx;
                       double newY = _aiButtonPosition.dy - details.delta.dy;
-                      
+
                       // Ekran sınırları içinde tut
                       newX = newX.clamp(0.0, constraints.maxWidth - buttonSize);
-                      newY = newY.clamp(0.0, constraints.maxHeight - buttonSize - bottomOffset);
-                      
+                      newY = newY.clamp(
+                        0.0,
+                        constraints.maxHeight - buttonSize - bottomOffset,
+                      );
+
                       _aiButtonPosition = Offset(newX, newY);
                     });
                   },
                   child: FloatingActionButton(
+                    heroTag: 'ai_assistant_fab',
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => AIAssistantScreen(
-                            businessId: widget.businessId,
-                          ),
+                          builder: (context) =>
+                              AIAssistantScreen(businessId: widget.businessId),
                         ),
                       );
                     },
                     backgroundColor: Colors.orange,
-                    child: Icon(
-                      Icons.smart_toy,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.smart_toy, color: Colors.white),
                     tooltip: 'AI Asistan',
                   ),
                 ),
@@ -249,6 +251,7 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
       ),
       floatingActionButton: _cartItemCount > 0
           ? FloatingActionButton.extended(
+              heroTag: 'cart_fab',
               onPressed: _openCart,
               icon: Stack(
                 children: [
@@ -291,10 +294,7 @@ class _MenuTab extends StatefulWidget {
   final String businessId;
   final Function(CartItem) onAddToCart;
 
-  const _MenuTab({
-    required this.businessId,
-    required this.onAddToCart,
-  });
+  const _MenuTab({required this.businessId, required this.onAddToCart});
 
   @override
   State<_MenuTab> createState() => _MenuTabState();
@@ -325,14 +325,18 @@ class _MenuTabState extends State<_MenuTab> {
     try {
       final categories = await _menuService.getCategories(widget.businessId);
       final menuItems = await _menuService.getMenuItems(widget.businessId);
-      final availableItems = menuItems.where((item) => item.isAvailable).toList();
+      final availableItems = menuItems
+          .where((item) => item.isAvailable)
+          .toList();
 
       final user = _authService.currentUser;
       Map<String, CampaignProgress> progressMap = {};
       Map<String, Campaign> campaignsMap = {};
       if (user != null) {
         try {
-          final campaigns = await _campaignService.getActiveCampaigns(widget.businessId);
+          final campaigns = await _campaignService.getActiveCampaigns(
+            widget.businessId,
+          );
           for (final campaign in campaigns) {
             if (campaign.id != null) {
               campaignsMap[campaign.id!] = campaign;
@@ -378,7 +382,9 @@ class _MenuTabState extends State<_MenuTab> {
     if (_selectedCategoryId == null) {
       return items;
     }
-    return items.where((item) => item.categoryId == _selectedCategoryId).toList();
+    return items
+        .where((item) => item.categoryId == _selectedCategoryId)
+        .toList();
   }
 
   double _getItemPrice(MenuItem item) {
@@ -406,18 +412,11 @@ class _MenuTabState extends State<_MenuTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.restaurant_menu,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.restaurant_menu, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'Henüz menü öğesi eklenmemiş',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -492,145 +491,158 @@ class _MenuTabState extends State<_MenuTab> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _filteredMenuItems.length,
                     itemBuilder: (context, index) {
-                    final item = _filteredMenuItems[index];
-                    final displayPrice = _getItemPrice(item);
-                    final isFree = displayPrice == 0.0;
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Ürün fotoğrafı veya placeholder
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: Colors.orange[100],
-                                borderRadius: BorderRadius.circular(8),
+                      final item = _filteredMenuItems[index];
+                      final displayPrice = _getItemPrice(item);
+                      final isFree = displayPrice == 0.0;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Ürün fotoğrafı veya placeholder
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child:
+                                    item.imageUrl != null &&
+                                        item.imageUrl!.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          item.imageUrl!,
+                                          width: 80,
+                                          height: 80,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Icon(
+                                                  Icons.restaurant,
+                                                  color: Colors.orange[700],
+                                                  size: 32,
+                                                );
+                                              },
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                value:
+                                                    loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? loadingProgress
+                                                              .cumulativeBytesLoaded /
+                                                          loadingProgress
+                                                              .expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.restaurant,
+                                        color: Colors.orange[700],
+                                        size: 32,
+                                      ),
                               ),
-                              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        item.imageUrl!,
-                                        width: 80,
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Icon(
-                                            Icons.restaurant,
-                                            color: Colors.orange[700],
-                                            size: 32,
-                                          );
-                                        },
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return Center(
-                                            child: CircularProgressIndicator(
-                                              value: loadingProgress.expectedTotalBytes != null
-                                                  ? loadingProgress.cumulativeBytesLoaded /
-                                                      loadingProgress.expectedTotalBytes!
-                                                  : null,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.restaurant,
-                                      color: Colors.orange[700],
-                                      size: 32,
-                                    ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (item.description.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      item.description,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
+                                      item.name,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ],
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue[100],
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          item.categoryName,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.blue[900],
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      const Spacer(),
+                                    if (item.description.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
                                       Text(
-                                        '${item.price.toStringAsFixed(2)} ₺',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.orange,
+                                        item.description,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
                                         ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.add_shopping_cart),
-                              color: Theme.of(context).colorScheme.primary,
-                              onPressed: () {
-                                widget.onAddToCart(CartItem(menuItem: item, quantity: 1));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${item.name} sepete eklendi',
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue[100],
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            item.categoryName,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.blue[900],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${item.price.toStringAsFixed(2)} ₺',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    backgroundColor: Colors.green,
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              },
-                              tooltip: 'Sepete Ekle',
-                            ),
-                          ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.add_shopping_cart),
+                                color: Theme.of(context).colorScheme.primary,
+                                onPressed: () {
+                                  widget.onAddToCart(
+                                    CartItem(menuItem: item, quantity: 1),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${item.name} sepete eklendi',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                                tooltip: 'Sepete Ekle',
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -642,9 +654,7 @@ class _MenuTabState extends State<_MenuTab> {
 class _CampaignsTab extends StatefulWidget {
   final String businessId;
 
-  const _CampaignsTab({
-    required this.businessId,
-  });
+  const _CampaignsTab({required this.businessId});
 
   @override
   State<_CampaignsTab> createState() => _CampaignsTabState();
@@ -668,7 +678,9 @@ class _CampaignsTabState extends State<_CampaignsTab> {
     });
 
     try {
-      final campaigns = await _campaignService.getActiveCampaigns(widget.businessId);
+      final campaigns = await _campaignService.getActiveCampaigns(
+        widget.businessId,
+      );
       setState(() {
         _campaigns = campaigns;
         _isLoading = false;
@@ -699,18 +711,11 @@ class _CampaignsTabState extends State<_CampaignsTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.local_offer,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.local_offer, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             const Text(
               'Henüz aktif kampanya yok',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),
@@ -742,246 +747,244 @@ class _CampaignsTabState extends State<_CampaignsTab> {
             padding: const EdgeInsets.all(16),
             itemCount: _campaigns.length,
             itemBuilder: (context, index) {
-            final campaign = _campaigns[index];
-            final progress = progressMap[campaign.id ?? ''];
-            final currentProgress = progress?.progress ?? 0;
-            final requiredProgress = campaign.requiredQuantity;
-            final progressPercentage = requiredProgress > 0
-                ? (currentProgress / requiredProgress).clamp(0.0, 1.0)
-                : 0.0;
-            final isCompleted = progress?.isCompleted ?? false;
+              final campaign = _campaigns[index];
+              final progress = progressMap[campaign.id ?? ''];
+              final currentProgress = progress?.progress ?? 0;
+              final requiredProgress = campaign.requiredQuantity;
+              final progressPercentage = requiredProgress > 0
+                  ? (currentProgress / requiredProgress).clamp(0.0, 1.0)
+                  : 0.0;
+              final isCompleted = progress?.isCompleted ?? false;
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: Colors.purple.withOpacity(0.3),
-                  width: 2,
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: Colors.purple.withOpacity(0.3),
+                    width: 2,
+                  ),
                 ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.purple[100],
-                            borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.purple[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.local_offer,
+                              color: Colors.purple[700],
+                            ),
                           ),
-                          child: Icon(
-                            Icons.local_offer,
-                            color: Colors.purple[700],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                campaign.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              if (campaign.description.isNotEmpty) ...[
-                                const SizedBox(height: 4),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  campaign.description,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
+                                  campaign.title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                if (campaign.description.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    campaign.description,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple[50],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${campaign.requiredQuantity}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple[700],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'AL',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${campaign.freeQuantity}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'BEDAVA',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (campaign.applicableMenuItemName != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.restaurant,
+                                size: 16,
+                                color: Colors.blue[700],
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                campaign.applicableMenuItemName!,
+                                style: TextStyle(
+                                  color: Colors.blue[900],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.purple[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${campaign.requiredQuantity}',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple[700],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'AL',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${campaign.freeQuantity}',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'BEDAVA',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (campaign.applicableMenuItemName != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      if (campaign.endDate != null) ...[
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
                             Icon(
-                              Icons.restaurant,
+                              Icons.access_time,
                               size: 16,
-                              color: Colors.blue[700],
+                              color: Colors.grey[600],
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              campaign.applicableMenuItemName!,
+                              'Bitiş: ${campaign.endDate!.day}/${campaign.endDate!.month}/${campaign.endDate!.year}',
                               style: TextStyle(
-                                color: Colors.blue[900],
-                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                                color: Colors.grey[600],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                    if (campaign.endDate != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
+                      ],
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 16,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Bitiş: ${campaign.endDate!.day}/${campaign.endDate!.month}/${campaign.endDate!.year}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'İlerleme:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            Text(
-                              '$currentProgress / $requiredProgress',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: isCompleted
-                                    ? Colors.green[700]
-                                    : Colors.purple[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: progressPercentage,
-                            minHeight: 20,
-                            backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              isCompleted ? Colors.green : Colors.purple,
-                            ),
-                          ),
-                        ),
-                        if (isCompleted) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.green[300]!,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green[700],
-                                  size: 20,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'İlerleme:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Kampanya tamamlandı! Menüde ${campaign.freeQuantity} ürün bedava.',
-                                    style: TextStyle(
-                                      color: Colors.green[900],
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 12,
+                              ),
+                              Text(
+                                '$currentProgress / $requiredProgress',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: isCompleted
+                                      ? Colors.green[700]
+                                      : Colors.purple[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: progressPercentage,
+                              minHeight: 20,
+                              backgroundColor: Colors.grey[200],
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                isCompleted ? Colors.green : Colors.purple,
+                              ),
+                            ),
+                          ),
+                          if (isCompleted) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.green[300]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Kampanya tamamlandı! Menüde ${campaign.freeQuantity} ürün bedava.',
+                                      style: TextStyle(
+                                        color: Colors.green[900],
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
           );
         },
       ),
@@ -993,9 +996,7 @@ class _CampaignsTabState extends State<_CampaignsTab> {
 class _OrdersTab extends StatefulWidget {
   final String businessId;
 
-  const _OrdersTab({
-    required this.businessId,
-  });
+  const _OrdersTab({required this.businessId});
 
   @override
   State<_OrdersTab> createState() => _OrdersTabState();
@@ -1146,18 +1147,11 @@ class _OrdersTabState extends State<_OrdersTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.receipt_long,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             const Text(
               'Bu işletmeden henüz sipariş vermediniz',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),
@@ -1196,10 +1190,7 @@ class _OrdersTabState extends State<_OrdersTab> {
                   if (order.createdAt != null)
                     Text(
                       '${order.createdAt!.day}/${order.createdAt!.month}/${order.createdAt!.year} ${order.createdAt!.hour}:${order.createdAt!.minute.toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                 ],
               ),
@@ -1228,19 +1219,23 @@ class _OrdersTabState extends State<_OrdersTab> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...order.items.map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('${item.quantity}x ${item.name}'),
-                                Text(
-                                  '${item.total.toStringAsFixed(2)} ₺',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                      ...order.items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('${item.quantity}x ${item.name}'),
+                              Text(
+                                '${item.total.toStringAsFixed(2)} ₺',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const Divider(),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1262,7 +1257,8 @@ class _OrdersTabState extends State<_OrdersTab> {
                           ),
                         ],
                       ),
-                      if (order.customerNote != null && order.customerNote!.isNotEmpty) ...[
+                      if (order.customerNote != null &&
+                          order.customerNote!.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -1273,7 +1269,11 @@ class _OrdersTabState extends State<_OrdersTab> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.note, size: 20, color: Colors.blue[700]),
+                              Icon(
+                                Icons.note,
+                                size: 20,
+                                color: Colors.blue[700],
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -1292,7 +1292,9 @@ class _OrdersTabState extends State<_OrdersTab> {
                           color: _getStatusColor(order.status).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _getStatusColor(order.status).withOpacity(0.3),
+                            color: _getStatusColor(
+                              order.status,
+                            ).withOpacity(0.3),
                           ),
                         ),
                         child: Row(
@@ -1321,7 +1323,9 @@ class _OrdersTabState extends State<_OrdersTab> {
                         const SizedBox(height: 8),
                         Builder(
                           builder: (context) {
-                            final review = order.id != null ? _reviewsMap[order.id!] : null;
+                            final review = order.id != null
+                                ? _reviewsMap[order.id!]
+                                : null;
                             return Column(
                               children: [
                                 if (review != null) ...[
@@ -1368,9 +1372,8 @@ class _OrdersTabState extends State<_OrdersTab> {
                                       final result = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => OrderReviewScreen(
-                                            order: order,
-                                          ),
+                                          builder: (context) =>
+                                              OrderReviewScreen(order: order),
                                         ),
                                       );
                                       if (result == true) {
@@ -1389,7 +1392,9 @@ class _OrdersTabState extends State<_OrdersTab> {
                                           : 'Siparişi Değerlendir',
                                     ),
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1409,4 +1414,3 @@ class _OrdersTabState extends State<_OrdersTab> {
     );
   }
 }
-

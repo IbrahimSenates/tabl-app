@@ -7,11 +7,16 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/auth_service.dart';
 
+import 'package:flutter_stripe/flutter_stripe.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await Firebase.initializeApp();
   await dotenv.load(fileName: ".env");
+
+  // Stripe initialization
+  Stripe.publishableKey = 'pk_test_51SdyfhGXUk11h7hoUn8mIAoXkc1V6mN9xlr0uT9De0WNcGWzZ0k6g7G4Mmg9KhkQmCWSbfzk4nEq5XcdKOJHilqz00o39dQFwI';
   
   runApp(const MyApp());
 }
