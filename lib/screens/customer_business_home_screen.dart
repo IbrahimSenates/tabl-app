@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/menu_service.dart';
 import '../services/campaign_service.dart';
 import '../services/order_service.dart';
@@ -10,6 +11,7 @@ import 'order_review_screen.dart';
 import 'ai_assistant_screen.dart';
 
 import '../services/session_service.dart';
+import '../services/user_service.dart';
 
 class CustomerBusinessHomeScreen extends StatefulWidget {
   final String businessId;
@@ -27,10 +29,12 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   final _campaignService = CampaignService();
   final _orderService = OrderService();
   final _authService = AuthService();
-  final _sessionService = SessionService(); // SessionService instance
+  final _sessionService = SessionService();
+  final _userService = UserService();
 
   late TabController _tabController;
   String? _businessName;
+  Map<String, dynamic>? _businessSettings;
   List<CartItem> _cartItems = [];
   Offset _aiButtonPosition = const Offset(16, 0); // AI buton pozisyonu
 
@@ -102,12 +106,364 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
   Future<void> _loadBusinessInfo() async {
     try {
       final menuData = await _menuService.getMenu(widget.businessId);
-      setState(() {
-        _businessName = menuData?['businessName'] ?? 'İşletme';
-      });
+      final settings = await _userService.getUserData(widget.businessId);
+      
+      if (mounted) {
+        setState(() {
+          _businessName = menuData?['businessName'] ?? settings?['businessName'] ?? 'İşletme';
+          _businessSettings = settings;
+        });
+      }
     } catch (e) {
       print('İşletme bilgisi yüklenirken hata: $e');
     }
+  }
+
+  void _showBusinessInfo() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    Text(
+                      _businessName ?? 'İşletme Bilgileri',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[800],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_businessSettings?['description'] != null && _businessSettings!['description'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _businessSettings!['description'],
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    _buildInfoSection(
+                      context,
+                      title: 'Çalışma Saatleri',
+                      icon: Icons.access_time_filled,
+                      color: Colors.blue,
+                      content: Column(
+                        children: [
+                          if (_businessSettings?['isOpen'] != null)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _businessSettings!['isOpen'] == true ? Colors.green[50] : Colors.red[50],
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _businessSettings!['isOpen'] == true ? Colors.green : Colors.red,
+                                ),
+                              ),
+                              child: Text(
+                                _businessSettings!['isOpen'] == true ? 'Şu An Açık' : 'Şu An Kapalı',
+                                style: TextStyle(
+                                  color: _businessSettings!['isOpen'] == true ? Colors.green[700] : Colors.red[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildTimeBox(
+                                context, 
+                                'Açılış', 
+                                _businessSettings?['openingTime'] ?? '09:00'
+                              ),
+                              Icon(Icons.arrow_forward, color: Colors.grey[400]),
+                              _buildTimeBox(
+                                context, 
+                                'Kapanış', 
+                                _businessSettings?['closingTime'] ?? '22:00'
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildInfoSection(
+                      context,
+                      title: 'İletişim',
+                      icon: Icons.location_on,
+                      color: Colors.red,
+                      content: Column(
+                        children: [
+                          if (_businessSettings?['phone'] != null)
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.phone, color: Colors.green, size: 20),
+                              ),
+                              title: Text(
+                                _businessSettings!['phone'],
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          if (_businessSettings?['address'] != null)
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.map, color: Colors.orange, size: 20),
+                              ),
+                              title: Text(
+                                _businessSettings!['address'],
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildInfoSection(
+                      context,
+                      title: 'Hizmetler',
+                      icon: Icons.room_service,
+                      color: Colors.purple,
+                      content: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildServiceItem(
+                            context,
+                            icon: Icons.restaurant,
+                            label: 'Masa',
+                            hasService: _businessSettings?['hasTableService'] ?? true,
+                          ),
+                          _buildServiceItem(
+                            context,
+                            icon: Icons.shopping_bag,
+                            label: 'Gel-Al',
+                            hasService: _businessSettings?['hasTakeaway'] ?? false,
+                          ),
+                          _buildServiceItem(
+                            context,
+                            icon: Icons.delivery_dining,
+                            label: 'Paket',
+                            hasService: _businessSettings?['hasDelivery'] ?? false,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (_businessSettings?['wifiName'] != null && _businessSettings!['wifiName'].toString().isNotEmpty)
+                      _buildInfoSection(
+                        context,
+                        title: 'Wi-Fi',
+                        icon: Icons.wifi,
+                        color: Colors.blue,
+                        content: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Ağ Adı:', style: TextStyle(color: Colors.grey)),
+                                  Text(
+                                    _businessSettings!['wifiName'],
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                              if (_businessSettings?['wifiPassword'] != null) ...[
+                                const Divider(),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Şifre:', style: TextStyle(color: Colors.grey)),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _businessSettings!['wifiPassword'],
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        IconButton(
+                                          icon: const Icon(Icons.copy, size: 20, color: Colors.blue),
+                                          onPressed: () {
+                                            Clipboard.setData(ClipboardData(text: _businessSettings!['wifiPassword']));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Wi-Fi şifresi kopyalandı!')),
+                                            );
+                                          },
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 48),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Widget content,
+  }) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: content,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimeBox(BuildContext context, String label, String time) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Text(
+            time,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceItem(BuildContext context, {
+    required IconData icon,
+    required String label,
+    required bool hasService,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: hasService ? Colors.orange[50] : Colors.grey[100],
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: hasService ? Colors.orange : Colors.grey[300]!,
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: hasService ? Colors.orange[700] : Colors.grey[400],
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: hasService ? FontWeight.bold : FontWeight.normal,
+            color: hasService ? Colors.orange[900] : Colors.grey[500],
+          ),
+        ),
+      ],
+    );
   }
 
   void _addToCart(CartItem cartItem) {
@@ -174,6 +530,14 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => _showBusinessInfo(),
+            tooltip: 'İşletme Bilgileri',
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
