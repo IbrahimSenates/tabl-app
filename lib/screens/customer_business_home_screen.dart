@@ -560,9 +560,16 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
                   _MenuTab(
                     businessId: widget.businessId,
                     onAddToCart: _addToCart,
+                    onRefresh: _loadBusinessInfo,
                   ),
-                  _CampaignsTab(businessId: widget.businessId),
-                  _OrdersTab(businessId: widget.businessId),
+                  _CampaignsTab(
+                    businessId: widget.businessId,
+                    onRefresh: _loadBusinessInfo,
+                  ),
+                  _OrdersTab(
+                    businessId: widget.businessId,
+                    onRefresh: _loadBusinessInfo,
+                  ),
                 ],
               ),
               // AI Asistan butonu - sürüklenebilir
@@ -657,8 +664,13 @@ class _CustomerBusinessHomeScreenState extends State<CustomerBusinessHomeScreen>
 class _MenuTab extends StatefulWidget {
   final String businessId;
   final Function(CartItem) onAddToCart;
+  final Future<void> Function()? onRefresh;
 
-  const _MenuTab({required this.businessId, required this.onAddToCart});
+  const _MenuTab({
+    required this.businessId,
+    required this.onAddToCart,
+    this.onRefresh,
+  });
 
   @override
   State<_MenuTab> createState() => _MenuTabState();
@@ -682,6 +694,10 @@ class _MenuTabState extends State<_MenuTab> {
   }
 
   Future<void> _loadMenu() async {
+    if (widget.onRefresh != null) {
+      widget.onRefresh!();
+    }
+    
     setState(() {
       _isLoading = true;
     });
@@ -1017,8 +1033,9 @@ class _MenuTabState extends State<_MenuTab> {
 // Kampanyalar Sekmesi
 class _CampaignsTab extends StatefulWidget {
   final String businessId;
+  final Future<void> Function()? onRefresh;
 
-  const _CampaignsTab({required this.businessId});
+  const _CampaignsTab({required this.businessId, this.onRefresh});
 
   @override
   State<_CampaignsTab> createState() => _CampaignsTabState();
@@ -1037,6 +1054,10 @@ class _CampaignsTabState extends State<_CampaignsTab> {
   }
 
   Future<void> _loadCampaigns() async {
+    if (widget.onRefresh != null) {
+      widget.onRefresh!();
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -1359,8 +1380,9 @@ class _CampaignsTabState extends State<_CampaignsTab> {
 // Siparişler Sekmesi
 class _OrdersTab extends StatefulWidget {
   final String businessId;
+  final Future<void> Function()? onRefresh;
 
-  const _OrdersTab({required this.businessId});
+  const _OrdersTab({required this.businessId, this.onRefresh});
 
   @override
   State<_OrdersTab> createState() => _OrdersTabState();
@@ -1381,6 +1403,10 @@ class _OrdersTabState extends State<_OrdersTab> {
   }
 
   Future<void> _loadOrders() async {
+    if (widget.onRefresh != null) {
+      widget.onRefresh!();
+    }
+
     setState(() {
       _isLoading = true;
     });
